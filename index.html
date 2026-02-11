@@ -878,14 +878,6 @@ html, body {
       <button style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer" onclick="toggleConfig()">✕</button>
     </h3>
     <div class="form-group">
-      <label>n8n Webhook URL (IN Parcel)</label>
-      <input type="url" id="cfgWebhookIn" placeholder="https://your-n8n.app.n8n.cloud/webhook/parcel-in">
-    </div>
-    <div class="form-group">
-      <label>n8n Webhook URL (OUT Parcel)</label>
-      <input type="url" id="cfgWebhookOut" placeholder="https://your-n8n.app.n8n.cloud/webhook/parcel-out">
-    </div>
-    <div class="form-group">
       <label>OpenAI API Key (for Photo OCR)</label>
       <input type="password" id="cfgApiKey" placeholder="sk-proj-...">
     </div>
@@ -912,6 +904,10 @@ html, body {
 // ==========================================
 const CONFIG_KEY = 'su_parcel_config';
 
+// Hardcoded webhook URLs — no per-user setup needed
+const WEBHOOK_IN = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-in';
+const WEBHOOK_OUT = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-out';
+
 function loadConfig() {
   try {
     return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
@@ -920,8 +916,6 @@ function loadConfig() {
 
 function saveConfig() {
   const config = {
-    webhookIn: document.getElementById('cfgWebhookIn').value.trim(),
-    webhookOut: document.getElementById('cfgWebhookOut').value.trim(),
     apiKey: document.getElementById('cfgApiKey').value.trim(),
     receivedBy: document.getElementById('cfgReceivedBy').value.trim()
   };
@@ -932,8 +926,6 @@ function saveConfig() {
 
 function populateConfig() {
   const cfg = loadConfig();
-  document.getElementById('cfgWebhookIn').value = cfg.webhookIn || '';
-  document.getElementById('cfgWebhookOut').value = cfg.webhookOut || '';
   document.getElementById('cfgApiKey').value = cfg.apiKey || '';
   document.getElementById('cfgReceivedBy').value = cfg.receivedBy || '';
 }
@@ -1357,13 +1349,7 @@ function selectOutDelivery(chip, name) {
 // FORM SUBMISSION
 // ==========================================
 async function submitForm() {
-  const cfg = loadConfig();
-  const webhookUrl = currentMode === 'in' ? cfg.webhookIn : cfg.webhookOut;
-
-  if (!webhookUrl) {
-    showToast('Set webhook URL in Settings first', 'error');
-    return;
-  }
+  const webhookUrl = currentMode === 'in' ? WEBHOOK_IN : WEBHOOK_OUT;
 
   const btn = document.getElementById('btnSubmit');
   btn.disabled = true;
