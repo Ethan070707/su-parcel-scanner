@@ -184,6 +184,18 @@ html, body {
   border: 2px solid rgba(59, 130, 246, 0.6);
   border-radius: 12px;
   position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+.scan-hint {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 .scan-region::before {
@@ -194,6 +206,72 @@ html, body {
   background: var(--accent);
   box-shadow: 0 0 12px var(--accent);
   animation: scan-line 2s ease-in-out infinite;
+}
+
+/* Dim area outside scan region */
+.scanner-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-mask: 
+    linear-gradient(#000 0 0) top/100% calc(30%) no-repeat,
+    linear-gradient(#000 0 0) bottom/100% calc(30%) no-repeat,
+    linear-gradient(#000 0 0) left/calc(15%) 100% no-repeat,
+    linear-gradient(#000 0 0) right/calc(15%) 100% no-repeat;
+  mask: 
+    linear-gradient(#000 0 0) top/100% calc(30%) no-repeat,
+    linear-gradient(#000 0 0) bottom/100% calc(30%) no-repeat,
+    linear-gradient(#000 0 0) left/calc(15%) 100% no-repeat,
+    linear-gradient(#000 0 0) right/calc(15%) 100% no-repeat;
+  pointer-events: none;
+}
+
+/* Multi-barcode selection */
+.scan-multi-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.scan-multi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0 10px;
+}
+
+.scan-multi-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.scan-multi-item:active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--accent);
+}
+
+.scan-multi-item-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+.scan-multi-item-courier {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
 }
 
 @keyframes scan-line {
@@ -639,20 +717,35 @@ html, body {
     <!-- Barcode scanner viewport -->
     <div class="scanner-viewport" id="scannerViewport">
       <video id="scannerVideo" autoplay playsinline muted></video>
+      <canvas id="scannerCanvas" style="display:none;"></canvas>
       <div class="scanner-overlay">
-        <div class="scan-region"></div>
+        <div class="scan-region">
+          <div class="scan-hint">Align barcode here</div>
+        </div>
       </div>
       <button class="scanner-close" onclick="stopBarcodeScan()">✕</button>
-      <!-- Barcode confirmation overlay -->
+      <!-- Barcode confirmation overlay: single result -->
       <div class="scan-confirm" id="scanConfirm">
         <div class="scan-confirm-content">
           <div class="scan-confirm-icon">✓</div>
           <div class="scan-confirm-label">Barcode Detected</div>
-          <div class="scan-confirm-code" id="scanConfirmCode">1234567890</div>
+          <div class="scan-confirm-code" id="scanConfirmCode"></div>
           <div class="scan-confirm-courier" id="scanConfirmCourier"></div>
           <div class="scan-confirm-buttons">
             <button class="scan-confirm-btn reject" onclick="rescanBarcode()">✕ Rescan</button>
             <button class="scan-confirm-btn accept" onclick="acceptBarcode()">✓ Use This</button>
+          </div>
+        </div>
+      </div>
+      <!-- Multi-barcode selection overlay -->
+      <div class="scan-confirm" id="scanMulti">
+        <div class="scan-confirm-content">
+          <div class="scan-confirm-icon" style="background:var(--accent);">?</div>
+          <div class="scan-confirm-label">Multiple Barcodes Found</div>
+          <div class="scan-multi-hint">Tap the correct one:</div>
+          <div class="scan-multi-list" id="scanMultiList"></div>
+          <div class="scan-confirm-buttons" style="margin-top:12px;">
+            <button class="scan-confirm-btn reject" onclick="rescanBarcode()">✕ Rescan</button>
           </div>
         </div>
       </div>
@@ -870,33 +963,67 @@ function switchMode(mode) {
 let scannerStream = null;
 let scanInterval = null;
 let pendingBarcode = null;
+let stableDetections = {};  // Track how many times each code is detected consecutively
+const STABLE_THRESHOLD = 3; // Must detect same code 3 times before showing
 
 async function startBarcodeScan() {
   const viewport = document.getElementById('scannerViewport');
   const video = document.getElementById('scannerVideo');
+  stableDetections = {};
   
   try {
     scannerStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     });
     video.srcObject = scannerStream;
+    await video.play();
     viewport.classList.add('active');
     document.getElementById('btnBarcode').classList.add('scanning');
 
     // Check for BarcodeDetector support
     if ('BarcodeDetector' in window) {
       const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'qr_code', 'data_matrix', 'itf'] });
+      
       scanInterval = setInterval(async () => {
         try {
-          const barcodes = await detector.detect(video);
-          if (barcodes.length > 0) {
-            const code = barcodes[0].rawValue;
-            handleBarcodeResult(code);
+          // Crop center region from video using canvas
+          const centerCodes = await detectCenterRegion(detector, video);
+          
+          if (centerCodes.length === 0) {
+            // Decay counts when nothing detected
+            for (const key in stableDetections) {
+              stableDetections[key] = Math.max(0, stableDetections[key] - 1);
+            }
+            return;
           }
+          
+          // Deduplicate codes
+          const uniqueCodes = [...new Set(centerCodes.map(c => c.rawValue))];
+          
+          // Increment stability counter for detected codes
+          uniqueCodes.forEach(code => {
+            stableDetections[code] = (stableDetections[code] || 0) + 1;
+          });
+          
+          // Find codes that have reached stability threshold
+          const stableCodes = uniqueCodes.filter(code => stableDetections[code] >= STABLE_THRESHOLD);
+          
+          if (stableCodes.length === 0) return; // Not stable enough yet
+          
+          // Pause scanning
+          if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+          
+          if (stableCodes.length === 1) {
+            // Single barcode — show simple confirmation
+            showSingleConfirm(stableCodes[0]);
+          } else {
+            // Multiple barcodes — show selection list
+            showMultiSelect(stableCodes);
+          }
+          
         } catch (e) { /* scanning... */ }
-      }, 300);
+      }, 400);
     } else {
-      // Fallback: prompt user to type or use photo
       showToast('Barcode API not available — use Photo Label instead', 'error');
       setTimeout(() => stopBarcodeScan(), 1500);
     }
@@ -906,29 +1033,79 @@ async function startBarcodeScan() {
   }
 }
 
+async function detectCenterRegion(detector, video) {
+  // Use canvas to crop center 70% width × 50% height of the video
+  const canvas = document.getElementById('scannerCanvas');
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  
+  if (vw === 0 || vh === 0) return [];
+  
+  // Center crop region (matches the visual scan-region box)
+  const cropW = vw * 0.7;
+  const cropH = vh * 0.5;
+  const cropX = (vw - cropW) / 2;
+  const cropY = (vh - cropH) / 2;
+  
+  canvas.width = cropW;
+  canvas.height = cropH;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  
+  // Detect barcodes only in the cropped center region
+  return await detector.detect(canvas);
+}
+
+function showSingleConfirm(code) {
+  pendingBarcode = code;
+  document.getElementById('scanConfirmCode').textContent = code;
+  
+  const courier = detectCourier(code);
+  document.getElementById('scanConfirmCourier').textContent = courier ? `Detected: ${courier}` : '';
+  
+  document.getElementById('scanConfirm').classList.add('active');
+  document.getElementById('scanMulti').classList.remove('active');
+}
+
+function showMultiSelect(codes) {
+  const list = document.getElementById('scanMultiList');
+  list.innerHTML = '';
+  
+  codes.forEach(code => {
+    const courier = detectCourier(code);
+    const item = document.createElement('div');
+    item.className = 'scan-multi-item';
+    item.innerHTML = `
+      <span class="scan-multi-item-code">${code}</span>
+      <span class="scan-multi-item-courier">${courier || ''}</span>
+    `;
+    item.onclick = () => selectFromMulti(code);
+    list.appendChild(item);
+  });
+  
+  document.getElementById('scanMulti').classList.add('active');
+  document.getElementById('scanConfirm').classList.remove('active');
+}
+
+function selectFromMulti(code) {
+  document.getElementById('scanMulti').classList.remove('active');
+  showSingleConfirm(code);
+}
+
 function stopBarcodeScan() {
   if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
   if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
   document.getElementById('scannerViewport').classList.remove('active');
   document.getElementById('btnBarcode').classList.remove('scanning');
   document.getElementById('scanConfirm').classList.remove('active');
+  document.getElementById('scanMulti').classList.remove('active');
   pendingBarcode = null;
+  stableDetections = {};
 }
 
 function handleBarcodeResult(code) {
-  // Pause scanning (but keep camera on)
-  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
-  pendingBarcode = code;
-  
-  // Show confirmation overlay
-  const confirm = document.getElementById('scanConfirm');
-  document.getElementById('scanConfirmCode').textContent = code;
-  
-  const courier = detectCourier(code);
-  const courierEl = document.getElementById('scanConfirmCourier');
-  courierEl.textContent = courier ? `Detected: ${courier}` : '';
-  
-  confirm.classList.add('active');
+  showSingleConfirm(code);
 }
 
 function acceptBarcode() {
@@ -957,7 +1134,9 @@ function acceptBarcode() {
 
 function rescanBarcode() {
   pendingBarcode = null;
+  stableDetections = {};
   document.getElementById('scanConfirm').classList.remove('active');
+  document.getElementById('scanMulti').classList.remove('active');
   
   // Resume scanning
   if ('BarcodeDetector' in window) {
@@ -965,12 +1144,27 @@ function rescanBarcode() {
     const video = document.getElementById('scannerVideo');
     scanInterval = setInterval(async () => {
       try {
-        const barcodes = await detector.detect(video);
-        if (barcodes.length > 0) {
-          handleBarcodeResult(barcodes[0].rawValue);
+        const centerCodes = await detectCenterRegion(detector, video);
+        if (centerCodes.length === 0) {
+          for (const key in stableDetections) {
+            stableDetections[key] = Math.max(0, stableDetections[key] - 1);
+          }
+          return;
+        }
+        const uniqueCodes = [...new Set(centerCodes.map(c => c.rawValue))];
+        uniqueCodes.forEach(code => {
+          stableDetections[code] = (stableDetections[code] || 0) + 1;
+        });
+        const stableCodes = uniqueCodes.filter(code => stableDetections[code] >= STABLE_THRESHOLD);
+        if (stableCodes.length === 0) return;
+        if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+        if (stableCodes.length === 1) {
+          showSingleConfirm(stableCodes[0]);
+        } else {
+          showMultiSelect(stableCodes);
         }
       } catch (e) { /* scanning... */ }
-    }, 300);
+    }, 400);
   }
 }
 
