@@ -179,8 +179,8 @@ html, body {
 }
 
 .scan-region {
-  width: 70%;
-  height: 40%;
+  width: 50%;
+  height: 30%;
   border: 2px solid rgba(59, 130, 246, 0.6);
   border-radius: 12px;
   position: relative;
@@ -213,17 +213,17 @@ html, body {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.5);
   -webkit-mask: 
-    linear-gradient(#000 0 0) top/100% calc(30%) no-repeat,
-    linear-gradient(#000 0 0) bottom/100% calc(30%) no-repeat,
-    linear-gradient(#000 0 0) left/calc(15%) 100% no-repeat,
-    linear-gradient(#000 0 0) right/calc(15%) 100% no-repeat;
+    linear-gradient(#000 0 0) top/100% calc(35%) no-repeat,
+    linear-gradient(#000 0 0) bottom/100% calc(35%) no-repeat,
+    linear-gradient(#000 0 0) left/calc(25%) 100% no-repeat,
+    linear-gradient(#000 0 0) right/calc(25%) 100% no-repeat;
   mask: 
-    linear-gradient(#000 0 0) top/100% calc(30%) no-repeat,
-    linear-gradient(#000 0 0) bottom/100% calc(30%) no-repeat,
-    linear-gradient(#000 0 0) left/calc(15%) 100% no-repeat,
-    linear-gradient(#000 0 0) right/calc(15%) 100% no-repeat;
+    linear-gradient(#000 0 0) top/100% calc(35%) no-repeat,
+    linear-gradient(#000 0 0) bottom/100% calc(35%) no-repeat,
+    linear-gradient(#000 0 0) left/calc(25%) 100% no-repeat,
+    linear-gradient(#000 0 0) right/calc(25%) 100% no-repeat;
   pointer-events: none;
 }
 
@@ -964,7 +964,7 @@ let scannerStream = null;
 let scanInterval = null;
 let pendingBarcode = null;
 let stableDetections = {};  // Track how many times each code is detected consecutively
-const STABLE_THRESHOLD = 3; // Must detect same code 3 times before showing
+const STABLE_THRESHOLD = 5; // Must detect same code 5 times before showing
 
 async function startBarcodeScan() {
   const viewport = document.getElementById('scannerViewport');
@@ -1022,7 +1022,7 @@ async function startBarcodeScan() {
           }
           
         } catch (e) { /* scanning... */ }
-      }, 400);
+      }, 600);
     } else {
       showToast('Barcode API not available — use Photo Label instead', 'error');
       setTimeout(() => stopBarcodeScan(), 1500);
@@ -1041,9 +1041,9 @@ async function detectCenterRegion(detector, video) {
   
   if (vw === 0 || vh === 0) return [];
   
-  // Center crop region (matches the visual scan-region box)
-  const cropW = vw * 0.7;
-  const cropH = vh * 0.5;
+  // Center crop region — narrow zone to reduce accidental scans
+  const cropW = vw * 0.50;
+  const cropH = vh * 0.30;
   const cropX = (vw - cropW) / 2;
   const cropY = (vh - cropH) / 2;
   
@@ -1164,7 +1164,7 @@ function rescanBarcode() {
           showMultiSelect(stableCodes);
         }
       } catch (e) { /* scanning... */ }
-    }, 400);
+    }, 600);
   }
 }
 
