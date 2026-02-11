@@ -1040,8 +1040,58 @@ async function startScanner(triggerBtnId) {
     }
   } catch (err) {
     console.error('Camera error:', err);
-    showToast('Camera access denied', 'error');
+    // Fallback: use file input with capture attribute (works on all iOS)
+    showToast('Opening camera for photo scan...', 'success');
+    scanFallbackCapture();
   }
+}
+
+function scanFallbackCapture() {
+  // Create a temporary file input to capture photo, then detect barcodes from it
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      try {
+        if ('BarcodeDetector' in window) {
+          const detector = new BarcodeDetector({ formats: getScanFormats() });
+          const barcodes = await detector.detect(img);
+          const uniqueCodes = [...new Set(barcodes.map(b => b.rawValue).filter(v => v))];
+          
+          if (uniqueCodes.length === 0) {
+            showToast('No barcode found in photo — try again', 'error');
+          } else if (uniqueCodes.length === 1) {
+            pendingBarcode = uniqueCodes[0];
+            acceptBarcode();
+          } else {
+            // Multiple barcodes — let user pick via prompt
+            const choices = uniqueCodes.map((c, i) => `${i + 1}. ${c}`).join('\n');
+            const pick = prompt(`Multiple barcodes found:\n${choices}\n\nEnter number to select:`);
+            const idx = parseInt(pick) - 1;
+            if (idx >= 0 && idx < uniqueCodes.length) {
+              pendingBarcode = uniqueCodes[idx];
+              acceptBarcode();
+            }
+          }
+        } else {
+          showToast('Barcode scanner not supported — use Photo Label', 'error');
+        }
+      } catch (err) {
+        console.error('Fallback scan error:', err);
+        showToast('Scan failed — try Photo Label instead', 'error');
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+  input.click();
 }
 
 async function detectCenterRegion(detector, video) {
