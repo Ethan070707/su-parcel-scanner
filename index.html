@@ -979,27 +979,31 @@ function getScanFormats() {
   return currentScanMode === 'qr' ? QR_FORMATS : BARCODE_FORMATS;
 }
 
-async function startBarcodeScan() {
+function startBarcodeScan() {
   currentScanMode = 'barcode';
-  await startScanner('btnBarcode');
+  // iOS: skip getUserMedia, directly open camera for photo capture
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    document.getElementById('barcodeCaptureInput').click();
+    return;
+  }
+  startScanner('btnBarcode');
 }
 
-async function startQRScan() {
+function startQRScan() {
   currentScanMode = 'qr';
-  await startScanner('btnQR');
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    document.getElementById('barcodeCaptureInput').click();
+    return;
+  }
+  startScanner('btnQR');
 }
 
 async function startScanner(triggerBtnId) {
   const viewport = document.getElementById('scannerViewport');
   const video = document.getElementById('scannerVideo');
   stableDetections = {};
-
-  // iOS Safari doesn't support getUserMedia well — use photo capture fallback
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (isIOS) {
-    document.getElementById('barcodeCaptureInput').click();
-    return;
-  }
   
   try {
     scannerStream = await navigator.mediaDevices.getUserMedia({
@@ -1051,9 +1055,7 @@ async function startScanner(triggerBtnId) {
     }
   } catch (err) {
     console.error('Camera error:', err);
-    // Fallback: use file input with capture attribute (works on all iOS)
-    showToast('Opening camera for photo scan...', 'success');
-    scanFallbackCapture();
+    showToast('Camera not available — use Photo Label', 'error');
   }
 }
 
