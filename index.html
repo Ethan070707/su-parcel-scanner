@@ -887,6 +887,10 @@ html, body {
 
 <!-- Hidden photo input -->
 <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+<!-- Hidden barcode photo fallback input (iOS) -->
+<input type="file" id="barcodeCaptureInput" accept="image/*" capture="environment" onchange="handleBarcodeCapture(event)">
+<!-- Hidden barcode capture input (iOS fallback) -->
+<input type="file" id="barcodeCaptureInput" accept="image/*" capture="environment" onchange="handleBarcodeCapture(event)">
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -989,6 +993,13 @@ async function startScanner(triggerBtnId) {
   const viewport = document.getElementById('scannerViewport');
   const video = document.getElementById('scannerVideo');
   stableDetections = {};
+
+  // iOS Safari doesn't support getUserMedia well — use photo capture fallback
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    document.getElementById('barcodeCaptureInput').click();
+    return;
+  }
   
   try {
     scannerStream = await navigator.mediaDevices.getUserMedia({
@@ -1047,51 +1058,47 @@ async function startScanner(triggerBtnId) {
 }
 
 function scanFallbackCapture() {
-  // Create a temporary file input to capture photo, then detect barcodes from it
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.capture = 'environment';
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = async () => {
-      try {
-        if ('BarcodeDetector' in window) {
-          const detector = new BarcodeDetector({ formats: getScanFormats() });
-          const barcodes = await detector.detect(img);
-          const uniqueCodes = [...new Set(barcodes.map(b => b.rawValue).filter(v => v))];
-          
-          if (uniqueCodes.length === 0) {
-            showToast('No barcode found in photo — try again', 'error');
-          } else if (uniqueCodes.length === 1) {
-            pendingBarcode = uniqueCodes[0];
-            acceptBarcode();
-          } else {
-            // Multiple barcodes — let user pick via prompt
-            const choices = uniqueCodes.map((c, i) => `${i + 1}. ${c}`).join('\n');
-            const pick = prompt(`Multiple barcodes found:\n${choices}\n\nEnter number to select:`);
-            const idx = parseInt(pick) - 1;
-            if (idx >= 0 && idx < uniqueCodes.length) {
-              pendingBarcode = uniqueCodes[idx];
-              acceptBarcode();
-            }
-          }
+  document.getElementById('barcodeCaptureInput').click();
+}
+
+async function handleBarcodeCapture(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = async () => {
+    try {
+      if ('BarcodeDetector' in window) {
+        const detector = new BarcodeDetector({ formats: getScanFormats() });
+        const barcodes = await detector.detect(img);
+        const uniqueCodes = [...new Set(barcodes.map(b => b.rawValue).filter(v => v))];
+
+        if (uniqueCodes.length === 0) {
+          showToast('No barcode found — try again or use Photo Label', 'error');
+        } else if (uniqueCodes.length === 1) {
+          pendingBarcode = uniqueCodes[0];
+          acceptBarcode();
         } else {
-          showToast('Barcode scanner not supported — use Photo Label', 'error');
+          const choices = uniqueCodes.map((c, i) => `${i + 1}. ${c}`).join('\n');
+          const pick = prompt(`Multiple barcodes found:\n${choices}\n\nEnter number:`);
+          const idx = parseInt(pick) - 1;
+          if (idx >= 0 && idx < uniqueCodes.length) {
+            pendingBarcode = uniqueCodes[idx];
+            acceptBarcode();
+          }
         }
-      } catch (err) {
-        console.error('Fallback scan error:', err);
-        showToast('Scan failed — try Photo Label instead', 'error');
+      } else {
+        showToast('Barcode scanner not available — use Photo Label', 'error');
       }
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
+    } catch (err) {
+      console.error('Barcode capture error:', err);
+      showToast('Scan failed — use Photo Label instead', 'error');
+    }
+    URL.revokeObjectURL(url);
   };
-  input.click();
+  img.src = url;
 }
 
 async function detectCenterRegion(detector, video) {
