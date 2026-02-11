@@ -109,7 +109,7 @@ html, body {
 
 .scan-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -706,7 +706,11 @@ html, body {
     <div class="scan-actions">
       <button class="scan-btn" id="btnBarcode" onclick="startBarcodeScan()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="16"/><line x1="9" y1="8" x2="9" y2="16"/><line x1="12" y1="8" x2="12" y2="16" stroke-width="2"/><line x1="15" y1="8" x2="15" y2="16"/><line x1="18" y1="8" x2="18" y2="16"/></svg>
-        Scan Barcode
+        Barcode
+      </button>
+      <button class="scan-btn" id="btnQR" onclick="startQRScan()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="5" y="5" width="2" height="2"/><rect x="17" y="5" width="2" height="2"/><rect x="5" y="17" width="2" height="2"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2zM16 16h2v2h-2z"/></svg>
+        QR Code
       </button>
       <button class="scan-btn" id="btnPhoto" onclick="takePhoto()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -964,9 +968,27 @@ let scannerStream = null;
 let scanInterval = null;
 let pendingBarcode = null;
 let stableDetections = {};
+let currentScanMode = 'barcode'; // 'barcode' or 'qr'
 const STABLE_THRESHOLD = 3;
 
+const BARCODE_FORMATS = ['code_128', 'code_39', 'ean_13', 'ean_8', 'data_matrix', 'itf'];
+const QR_FORMATS = ['qr_code'];
+
+function getScanFormats() {
+  return currentScanMode === 'qr' ? QR_FORMATS : BARCODE_FORMATS;
+}
+
 async function startBarcodeScan() {
+  currentScanMode = 'barcode';
+  await startScanner('btnBarcode');
+}
+
+async function startQRScan() {
+  currentScanMode = 'qr';
+  await startScanner('btnQR');
+}
+
+async function startScanner(triggerBtnId) {
   const viewport = document.getElementById('scannerViewport');
   const video = document.getElementById('scannerVideo');
   stableDetections = {};
@@ -978,10 +1000,10 @@ async function startBarcodeScan() {
     video.srcObject = scannerStream;
     await video.play();
     viewport.classList.add('active');
-    document.getElementById('btnBarcode').classList.add('scanning');
+    document.getElementById(triggerBtnId).classList.add('scanning');
 
     if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'qr_code', 'data_matrix', 'itf'] });
+      const detector = new BarcodeDetector({ formats: getScanFormats() });
       
       scanInterval = setInterval(async () => {
         try {
@@ -1091,6 +1113,7 @@ function stopBarcodeScan() {
   if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
   document.getElementById('scannerViewport').classList.remove('active');
   document.getElementById('btnBarcode').classList.remove('scanning');
+  document.getElementById('btnQR').classList.remove('scanning');
   hideAllOverlays();
   pendingBarcode = null;
   stableDetections = {};
@@ -1125,7 +1148,7 @@ function rescanBarcode() {
   
   // Resume scanning
   if ('BarcodeDetector' in window) {
-    const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'qr_code', 'data_matrix', 'itf'] });
+    const detector = new BarcodeDetector({ formats: getScanFormats() });
     const video = document.getElementById('scannerVideo');
     scanInterval = setInterval(async () => {
       try {
