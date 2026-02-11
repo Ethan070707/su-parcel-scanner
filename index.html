@@ -214,6 +214,98 @@ html, body {
   display: flex; align-items: center; justify-content: center;
 }
 
+/* Barcode confirmation overlay */
+.scan-confirm {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.scan-confirm.active { display: flex; }
+
+.scan-confirm-content {
+  text-align: center;
+  padding: 20px;
+  width: 100%;
+}
+
+.scan-confirm-icon {
+  width: 48px; height: 48px;
+  margin: 0 auto 10px;
+  background: var(--success);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: white;
+  animation: pop-in 0.3s ease;
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.scan-confirm-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.scan-confirm-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  word-break: break-all;
+  padding: 0 10px;
+}
+
+.scan-confirm-courier {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 18px;
+  min-height: 20px;
+}
+
+.scan-confirm-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.scan-confirm-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.scan-confirm-btn:active { transform: scale(0.95); }
+
+.scan-confirm-btn.accept {
+  background: var(--success);
+  color: white;
+}
+
+.scan-confirm-btn.reject {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-secondary);
+}
+
 /* Photo preview */
 .photo-preview {
   display: none;
@@ -551,6 +643,19 @@ html, body {
         <div class="scan-region"></div>
       </div>
       <button class="scanner-close" onclick="stopBarcodeScan()">✕</button>
+      <!-- Barcode confirmation overlay -->
+      <div class="scan-confirm" id="scanConfirm">
+        <div class="scan-confirm-content">
+          <div class="scan-confirm-icon">✓</div>
+          <div class="scan-confirm-label">Barcode Detected</div>
+          <div class="scan-confirm-code" id="scanConfirmCode">1234567890</div>
+          <div class="scan-confirm-courier" id="scanConfirmCourier"></div>
+          <div class="scan-confirm-buttons">
+            <button class="scan-confirm-btn reject" onclick="rescanBarcode()">✕ Rescan</button>
+            <button class="scan-confirm-btn accept" onclick="acceptBarcode()">✓ Use This</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Photo preview -->
@@ -764,6 +869,7 @@ function switchMode(mode) {
 // ==========================================
 let scannerStream = null;
 let scanInterval = null;
+let pendingBarcode = null;
 
 async function startBarcodeScan() {
   const viewport = document.getElementById('scannerViewport');
@@ -805,11 +911,32 @@ function stopBarcodeScan() {
   if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
   document.getElementById('scannerViewport').classList.remove('active');
   document.getElementById('btnBarcode').classList.remove('scanning');
+  document.getElementById('scanConfirm').classList.remove('active');
+  pendingBarcode = null;
 }
 
 function handleBarcodeResult(code) {
+  // Pause scanning (but keep camera on)
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  pendingBarcode = code;
+  
+  // Show confirmation overlay
+  const confirm = document.getElementById('scanConfirm');
+  document.getElementById('scanConfirmCode').textContent = code;
+  
+  const courier = detectCourier(code);
+  const courierEl = document.getElementById('scanConfirmCourier');
+  courierEl.textContent = courier ? `Detected: ${courier}` : '';
+  
+  confirm.classList.add('active');
+}
+
+function acceptBarcode() {
+  const code = pendingBarcode;
+  if (!code) return;
+  
   stopBarcodeScan();
-  showToast('Barcode detected!', 'success');
+  showToast('Barcode accepted ✓', 'success');
   
   // Fill AWB field
   document.getElementById('inAwb').value = code;
@@ -820,10 +947,30 @@ function handleBarcodeResult(code) {
   if (courier) {
     document.getElementById('inSender').value = courier;
     document.getElementById('inSender').classList.add('ai-filled');
-    // Highlight matching chip
     document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
       chip.classList.toggle('active', chip.textContent === courier);
     });
+  }
+  
+  pendingBarcode = null;
+}
+
+function rescanBarcode() {
+  pendingBarcode = null;
+  document.getElementById('scanConfirm').classList.remove('active');
+  
+  // Resume scanning
+  if ('BarcodeDetector' in window) {
+    const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'qr_code', 'data_matrix', 'itf'] });
+    const video = document.getElementById('scannerVideo');
+    scanInterval = setInterval(async () => {
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          handleBarcodeResult(barcodes[0].rawValue);
+        }
+      } catch (e) { /* scanning... */ }
+    }, 300);
   }
 }
 
