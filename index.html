@@ -891,8 +891,16 @@ html, body {
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- BarcodeDetector polyfill for iOS/Safari -->
-<script src="https://cdn.jsdelivr.net/npm/barcode-detector@2/dist/es/polyfill.min.js"></script>
+<!-- BarcodeDetector polyfill for iOS/Safari (ZBar WebAssembly) -->
+<script src="https://cdn.jsdelivr.net/npm/@undecaf/zbar-wasm@0.9.15/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@undecaf/barcode-detector-polyfill@0.9.23/dist/index.js"></script>
+<script>
+  try {
+    window['BarcodeDetector'].getSupportedFormats();
+  } catch {
+    window['BarcodeDetector'] = barcodeDetectorPolyfill.BarcodeDetectorPolyfill;
+  }
+</script>
 
 <script>
 // ==========================================
