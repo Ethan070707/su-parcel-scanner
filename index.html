@@ -491,6 +491,18 @@ html, body {
   background: rgba(34, 197, 94, 0.05);
 }
 
+/* Low-confidence courier suggestion (amber, not green) */
+.form-group input.ai-suggest {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.sender-chip.suggest {
+  border-color: var(--warning);
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.1);
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -887,9 +899,7 @@ html, body {
 
 <!-- Hidden photo input -->
 <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
-<!-- Hidden barcode photo fallback input (iOS) -->
-<input type="file" id="barcodeCaptureInput" accept="image/*" capture="environment" onchange="handleBarcodeCapture(event)">
-<!-- Hidden barcode capture input (iOS fallback) -->
+<!-- Hidden barcode photo capture input (iOS fallback) -->
 <input type="file" id="barcodeCaptureInput" accept="image/*" capture="environment" onchange="handleBarcodeCapture(event)">
 
 <!-- Toast -->
@@ -913,9 +923,11 @@ html, body {
 const CONFIG_KEY = 'su_parcel_config';
 
 // Hardcoded webhook URLs — no per-user setup needed
-const WEBHOOK_IN = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-in';
-const WEBHOOK_OUT = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-out';
-const WEBHOOK_OCR = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-ocr';
+const WEBHOOK_IN  = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-in-k7m2x9';
+const WEBHOOK_OCR = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-ocr-p4w8j3';
+
+// Shared auth key — must match the "X-SU-Key" Header Auth credential value in n8n
+const SU_KEY = 'su_8fK2mQ9xL4pR7vN3wZ6bY1tD5gH0jA';
 
 function loadConfig() {
   try {
@@ -1133,8 +1145,9 @@ function showSingleConfirm(code) {
   pendingBarcode = code;
   document.getElementById('scanConfirmCode').textContent = code;
   
-  const courier = detectCourier(code);
-  document.getElementById('scanConfirmCourier').textContent = courier ? `Detected: ${courier}` : '';
+  const { courier, confidence } = detectCourier(code);
+  document.getElementById('scanConfirmCourier').textContent =
+    courier ? (confidence === 'high' ? `Detected: ${courier}` : `Possibly: ${courier} — please confirm`) : '';
   
   hideAllOverlays();
   document.getElementById('scanConfirm').classList.add('active');
@@ -1144,8 +1157,12 @@ function showMultiSelect(codes) {
   const list = document.getElementById('scanMultiList');
   list.innerHTML = '';
   
-  codes.forEach(code => {
-    const courier = detectCourier(code);
+  // High-confidence matches first, so the likely-correct code is on top
+  const ranked = codes
+    .map(code => ({ code, ...detectCourier(code) }))
+    .sort((a, b) => (b.confidence === 'high' ? 1 : 0) - (a.confidence === 'high' ? 1 : 0));
+  
+  ranked.forEach(({ code, courier }) => {
     const item = document.createElement('div');
     item.className = 'scan-multi-item';
     item.innerHTML = `
@@ -1182,16 +1199,34 @@ function acceptBarcode() {
   stopBarcodeScan();
   showToast('Barcode accepted ✓', 'success');
   
-  document.getElementById('inAwb').value = code;
-  document.getElementById('inAwb').classList.add('ai-filled');
+  const awbEl = document.getElementById('inAwb');
+  awbEl.value = code;
+  awbEl.classList.add('ai-filled');
   
-  const courier = detectCourier(code);
+  const senderEl = document.getElementById('inSender');
+  const { courier, confidence } = detectCourier(code);
+  
+  // Reset any previous courier state
+  senderEl.classList.remove('ai-filled', 'ai-suggest');
+  document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
+    chip.classList.remove('active', 'suggest');
+  });
+  
   if (courier) {
-    document.getElementById('inSender').value = courier;
-    document.getElementById('inSender').classList.add('ai-filled');
-    document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
-      chip.classList.toggle('active', chip.textContent === courier);
-    });
+    if (confidence === 'high') {
+      // High confidence: auto-fill + green
+      senderEl.value = courier;
+      senderEl.classList.add('ai-filled');
+      document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.textContent === courier);
+      });
+    } else {
+      // Low confidence: DON'T fill the field — just highlight the chip as a suggestion (amber)
+      document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
+        chip.classList.toggle('suggest', chip.textContent === courier);
+      });
+      showToast(`Courier guess: ${courier} — tap to confirm`, 'success');
+    }
   }
   
   pendingBarcode = null;
@@ -1232,17 +1267,43 @@ function rescanBarcode() {
   }
 }
 
-function detectCourier(trackingNumber) {
-  const tn = trackingNumber.toUpperCase();
-  // DHL patterns
-  if (/^\d{10,11}$/.test(tn) || /^[0-9]{3}[-\s]?[0-9]{8}$/.test(tn)) return 'DHL';
-  // FedEx patterns
-  if (/^\d{12,22}$/.test(tn) || /^[0-9]{4}[-\s]?[0-9]{4}[-\s]?[0-9]{4}$/.test(tn)) return 'FedEx';
-  // UPS patterns
-  if (/^1Z[A-Z0-9]{16,18}$/i.test(tn)) return 'UPS';
-  // TNT
-  if (/^GE\d{9}[A-Z]{2}$/.test(tn)) return 'TNT';
-  return null;
+// ==========================================
+// COURIER DETECTION
+// Returns { courier: string|null, confidence: 'high'|'low'|null }
+//   high  -> unambiguous alphabetic prefix, safe to auto-fill
+//   low   -> pure-numeric guess by length, may be wrong, suggest only
+// ==========================================
+function detectCourier(raw) {
+  if (!raw) return { courier: null, confidence: null };
+
+  // Step 0: normalise — strip spaces / dashes / slashes / dots, uppercase
+  const tn = String(raw).toUpperCase().replace(/[\s\-\/\.]/g, '');
+
+  // Tier 1: alphabetic prefixes (unambiguous -> high confidence)
+  const PREFIX_RULES = [
+    { re: /^1Z[0-9A-Z]{16}$/,   courier: 'UPS' },
+    { re: /^SF\d{13,15}$/,      courier: 'SF Express' },
+    { re: /^JT\d{12,16}$/,      courier: 'J&T Express' },
+    { re: /^SPNDD\d{8,10}$/,    courier: 'Singpost' },
+    { re: /^[A-Z]{2}\d{9}SG$/,  courier: 'Singpost' },   // S10 international format
+    { re: /^GE\d{9}[A-Z]{2}$/,  courier: 'TNT' },
+    { re: /^JJD\d{10,18}$/,     courier: 'DHL' },         // DHL routing barcode
+    { re: /^JVGL\d{10,18}$/,    courier: 'DHL' }
+  ];
+  for (const r of PREFIX_RULES) {
+    if (r.re.test(tn)) return { courier: r.courier, confidence: 'high' };
+  }
+
+  // Tier 2: pure numeric — ambiguous, best guess only (low confidence)
+  if (/^\d+$/.test(tn)) {
+    const len = tn.length;
+    if (len === 9)                 return { courier: 'TNT',   confidence: 'low' };
+    if (len === 10 || len === 11)  return { courier: 'DHL',   confidence: 'low' };
+    if (len === 12)                return { courier: 'FedEx', confidence: 'low' };
+    if (len >= 14 && len <= 22)    return { courier: 'FedEx', confidence: 'low' };
+  }
+
+  return { courier: null, confidence: null };
 }
 
 // ==========================================
@@ -1265,7 +1326,7 @@ async function handlePhoto(event) {
     document.getElementById('photoImg').src = base64Full;
     document.getElementById('photoPreview').classList.add('active');
     
-    // Send to Claude Vision API for OCR
+    // Send to AI Vision API for OCR
     await analyzeWithAI(base64Data, file.type);
   };
   reader.readAsDataURL(file);
@@ -1283,15 +1344,24 @@ async function analyzeWithAI(base64Data, mediaType) {
   try {
     const response = await fetch(WEBHOOK_OCR, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SU-Key': SU_KEY
+      },
       body: JSON.stringify({
         image_base64: base64Data,
         media_type: mediaType
       })
     });
 
+    // Surface server-side rejections (e.g. daily OCR limit -> 429) with a friendly message
     if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
+      let msg = `Server error: ${response.status}`;
+      try {
+        const j = JSON.parse(await response.text());
+        if (j && j.message) msg = j.message;
+      } catch (e) { /* keep default */ }
+      throw new Error(msg);
     }
 
     const text = await response.text();
@@ -1324,7 +1394,7 @@ async function analyzeWithAI(base64Data, mediaType) {
   } catch (err) {
     console.error('AI analysis error:', err);
     status.className = 'ai-status active error';
-    statusText.textContent = `✕ Analysis failed: ${err.message}`;
+    statusText.textContent = `✕ ${err.message}`;
     setTimeout(() => { status.className = 'ai-status'; }, 5000);
   }
 }
@@ -1367,9 +1437,11 @@ function clearPhoto() {
 // SENDER CHIPS
 // ==========================================
 function selectSender(chip, name) {
-  document.querySelectorAll('#inForm .sender-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#inForm .sender-chip').forEach(c => c.classList.remove('active', 'suggest'));
   chip.classList.add('active');
-  document.getElementById('inSender').value = name;
+  const senderEl = document.getElementById('inSender');
+  senderEl.value = name;
+  senderEl.classList.remove('ai-suggest');
 }
 
 function selectOutDelivery(chip, name) {
@@ -1382,46 +1454,42 @@ function selectOutDelivery(chip, name) {
 // FORM SUBMISSION
 // ==========================================
 async function submitForm() {
-  const webhookUrl = currentMode === 'in' ? WEBHOOK_IN : WEBHOOK_OUT;
+  // OUT is handled by a separate system now; guard against accidental OUT submits
+  if (currentMode !== 'in') {
+    showToast('OUT is handled by another system', 'error');
+    return;
+  }
 
   const btn = document.getElementById('btnSubmit');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  let payload;
-  if (currentMode === 'in') {
-    payload = {
-      type: 'IN',
-      sender: document.getElementById('inSender').value,
-      awb_number: document.getElementById('inAwb').value,
-      description: document.getElementById('inDescription').value,
-      pieces: document.getElementById('inPieces').value,
-      weight: document.getElementById('inWeight').value,
-      gst: document.getElementById('inGst').value,
-      company_name: document.getElementById('inCompany').value,
-      vessel_name: document.getElementById('inVessel').value,
-      remarks: document.getElementById('inRemarks').value
-    };
-  } else {
-    payload = {
-      type: 'OUT',
-      delivery: document.getElementById('outDelivery').value,
-      company_name: document.getElementById('outCompany').value,
-      vessel_name: document.getElementById('outVessel').value,
-      remarks: document.getElementById('outRemarks').value
-    };
-  }
+  const payload = {
+    type: 'IN',
+    sender: document.getElementById('inSender').value,
+    awb_number: document.getElementById('inAwb').value,
+    description: document.getElementById('inDescription').value,
+    pieces: document.getElementById('inPieces').value,
+    weight: document.getElementById('inWeight').value,
+    gst: document.getElementById('inGst').value,
+    company_name: document.getElementById('inCompany').value,
+    vessel_name: document.getElementById('inVessel').value,
+    remarks: document.getElementById('inRemarks').value
+  };
 
   try {
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(WEBHOOK_IN, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SU-Key': SU_KEY
+      },
       body: JSON.stringify(payload)
     });
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
-    showToast(`Parcel ${currentMode.toUpperCase()} recorded ✓`, 'success');
+    showToast('Parcel IN recorded ✓', 'success');
     clearForm();
   } catch (err) {
     console.error('Submit error:', err);
@@ -1440,16 +1508,16 @@ function clearForm() {
   ['inSender', 'inAwb', 'inDescription', 'inPieces', 'inWeight', 'inGst', 'inCompany', 'inVessel', 'inRemarks'].forEach(id => {
     const el = document.getElementById(id);
     el.value = '';
-    el.classList.remove('ai-filled');
+    el.classList.remove('ai-filled', 'ai-suggest');
   });
   // Clear OUT form
   ['outDelivery', 'outCompany', 'outVessel', 'outRemarks'].forEach(id => {
     const el = document.getElementById(id);
     el.value = '';
-    el.classList.remove('ai-filled');
+    el.classList.remove('ai-filled', 'ai-suggest');
   });
   // Clear chips
-  document.querySelectorAll('.sender-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.sender-chip').forEach(c => c.classList.remove('active', 'suggest'));
   // Clear photo
   clearPhoto();
   // Clear scanner
