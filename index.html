@@ -11,7 +11,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
   --bg-deep: #0a1628;
   --bg-card: #111d33;
@@ -30,7 +29,6 @@
   --radius: 12px;
   --radius-sm: 8px;
 }
-
 html, body {
   height: 100%;
   font-family: 'DM Sans', -apple-system, sans-serif;
@@ -39,7 +37,6 @@ html, body {
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
-
 /* ===== HEADER ===== */
 .header {
   position: sticky;
@@ -54,7 +51,6 @@ html, body {
   align-items: center;
   gap: 12px;
 }
-
 .header-logo {
   width: 36px; height: 36px;
   background: linear-gradient(135deg, var(--accent), #6366f1);
@@ -63,37 +59,22 @@ html, body {
   font-weight: 700; font-size: 14px; color: white;
   flex-shrink: 0;
 }
-
 .header-text h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
 .header-text p { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-
-.header-mode {
+/* 齿轮改成正常流内元素，不再 position:absolute（原来会和右侧按钮重叠） */
+.config-trigger {
   margin-left: auto;
-  display: flex;
-  background: var(--bg-input);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-
-.mode-btn {
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: inherit;
+  flex-shrink: 0;
+  background: none;
   border: none;
-  background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 0.3px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
 }
-
-.mode-btn.active {
-  background: var(--accent);
-  color: white;
-}
-
+.config-trigger svg { width: 20px; height: 20px; }
+.config-trigger.alert { color: var(--warning); }
 /* ===== MAIN CONTENT ===== */
 .main {
   padding: 16px;
@@ -101,19 +82,41 @@ html, body {
   max-width: 480px;
   margin: 0 auto;
 }
-
-/* ===== SCAN SECTION ===== */
-.scan-section {
-  margin-bottom: 20px;
+/* ===== PENDING QUEUE BAR ===== */
+.pending-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--warning);
 }
-
+.pending-bar.active { display: flex; }
+.pending-bar span { flex: 1; }
+.pending-bar button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--warning);
+  color: #1a1200;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pending-bar button:disabled { opacity: 0.5; pointer-events: none; }
+/* ===== SCAN SECTION ===== */
+.scan-section { margin-bottom: 20px; }
 .scan-actions {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   margin-bottom: 12px;
 }
-
 .scan-btn {
   display: flex;
   flex-direction: column;
@@ -130,26 +133,21 @@ html, body {
   cursor: pointer;
   transition: all 0.25s;
 }
-
 .scan-btn:active {
   transform: scale(0.97);
   border-color: var(--accent);
   background: rgba(59, 130, 246, 0.08);
 }
-
 .scan-btn svg { width: 28px; height: 28px; stroke: var(--accent); }
-
 .scan-btn.scanning {
   border-color: var(--accent);
   background: rgba(59, 130, 246, 0.06);
   animation: pulse-border 1.5s infinite;
 }
-
 @keyframes pulse-border {
   0%, 100% { border-color: var(--accent); }
   50% { border-color: var(--accent-glow); }
 }
-
 /* Scanner viewport */
 .scanner-viewport {
   display: none;
@@ -161,15 +159,12 @@ html, body {
   overflow: hidden;
   margin-bottom: 12px;
 }
-
 .scanner-viewport.active { display: block; }
-
 .scanner-viewport video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .scanner-overlay {
   position: absolute;
   inset: 0;
@@ -177,7 +172,6 @@ html, body {
   align-items: center;
   justify-content: center;
 }
-
 .scan-region {
   width: 70%;
   height: 40%;
@@ -189,7 +183,6 @@ html, body {
   justify-content: center;
   padding-bottom: 8px;
 }
-
 .scan-hint {
   font-size: 11px;
   color: rgba(255,255,255,0.6);
@@ -197,7 +190,6 @@ html, body {
   font-weight: 500;
   letter-spacing: 0.5px;
 }
-
 .scan-region::before {
   content: '';
   position: absolute;
@@ -207,78 +199,27 @@ html, body {
   box-shadow: 0 0 12px var(--accent);
   animation: scan-line 2s ease-in-out infinite;
 }
-
-/* Dim area outside scan region */
 .scanner-overlay::before {
   content: '';
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  -webkit-mask: 
+  -webkit-mask:
     linear-gradient(#000 0 0) top/100% calc(30%) no-repeat,
     linear-gradient(#000 0 0) bottom/100% calc(30%) no-repeat,
     linear-gradient(#000 0 0) left/calc(15%) 100% no-repeat,
     linear-gradient(#000 0 0) right/calc(15%) 100% no-repeat;
-  mask: 
+  mask:
     linear-gradient(#000 0 0) top/100% calc(30%) no-repeat,
     linear-gradient(#000 0 0) bottom/100% calc(30%) no-repeat,
     linear-gradient(#000 0 0) left/calc(15%) 100% no-repeat,
     linear-gradient(#000 0 0) right/calc(15%) 100% no-repeat;
   pointer-events: none;
 }
-
-/* Multi-barcode selection */
-.scan-multi-hint {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
-}
-
-.scan-multi-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
-  padding: 0 10px;
-}
-
-.scan-multi-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.scan-multi-item:active {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: var(--accent);
-}
-
-.scan-multi-item-code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  letter-spacing: 0.5px;
-}
-
-.scan-multi-item-courier {
-  font-size: 11px;
-  color: var(--accent);
-  font-weight: 500;
-}
-
 @keyframes scan-line {
   0%, 100% { top: 0; }
   50% { top: calc(100% - 2px); }
 }
-
 .scanner-close {
   position: absolute;
   top: 8px; right: 8px;
@@ -291,7 +232,6 @@ html, body {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-
 /* Barcode confirmation overlay */
 .scan-confirm {
   display: none;
@@ -304,15 +244,8 @@ html, body {
   justify-content: center;
   z-index: 10;
 }
-
 .scan-confirm.active { display: flex; }
-
-.scan-confirm-content {
-  text-align: center;
-  padding: 20px;
-  width: 100%;
-}
-
+.scan-confirm-content { text-align: center; padding: 20px; width: 100%; }
 .scan-confirm-icon {
   width: 48px; height: 48px;
   margin: 0 auto 10px;
@@ -322,20 +255,17 @@ html, body {
   font-size: 24px; color: white;
   animation: pop-in 0.3s ease;
 }
-
 @keyframes pop-in {
   0% { transform: scale(0); }
   70% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
-
 .scan-confirm-label {
   font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 8px;
   font-weight: 500;
 }
-
 .scan-confirm-code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 20px;
@@ -346,7 +276,6 @@ html, body {
   word-break: break-all;
   padding: 0 10px;
 }
-
 .scan-confirm-courier {
   font-size: 13px;
   color: var(--accent);
@@ -354,13 +283,7 @@ html, body {
   margin-bottom: 18px;
   min-height: 20px;
 }
-
-.scan-confirm-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-
+.scan-confirm-buttons { display: flex; gap: 10px; justify-content: center; }
 .scan-confirm-btn {
   padding: 10px 24px;
   border: none;
@@ -371,19 +294,50 @@ html, body {
   cursor: pointer;
   transition: all 0.15s;
 }
-
 .scan-confirm-btn:active { transform: scale(0.95); }
-
-.scan-confirm-btn.accept {
-  background: var(--success);
+.scan-confirm-btn.accept { background: var(--success); color: white; }
+.scan-confirm-btn.reject { background: rgba(255,255,255,0.12); color: var(--text-secondary); }
+/* Multi-barcode selection */
+.scan-multi-hint { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.scan-multi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0 10px;
+}
+.scan-multi-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.scan-multi-item:active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--accent);
+}
+.scan-multi-item-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
   color: white;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+  text-align: left;
 }
-
-.scan-confirm-btn.reject {
-  background: rgba(255,255,255,0.12);
-  color: var(--text-secondary);
+.scan-multi-item-courier {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+  flex-shrink: 0;
 }
-
 /* Photo preview */
 .photo-preview {
   display: none;
@@ -394,15 +348,8 @@ html, body {
   margin-bottom: 12px;
   border: 1px solid var(--border);
 }
-
 .photo-preview.active { display: block; }
 .photo-preview img { width: 100%; display: block; }
-
-.photo-preview .scanner-close {
-  position: absolute;
-  top: 8px; right: 8px;
-}
-
 /* AI Status */
 .ai-status {
   display: none;
@@ -415,20 +362,19 @@ html, body {
   margin-bottom: 16px;
   font-size: 13px;
   color: var(--accent);
+  line-height: 1.4;
 }
-
 .ai-status.active { display: flex; }
-.ai-status.success { 
-  background: var(--success-glow); 
-  border-color: rgba(34, 197, 94, 0.3); 
-  color: var(--success); 
+.ai-status.success {
+  background: var(--success-glow);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--success);
 }
-.ai-status.error { 
-  background: rgba(239, 68, 68, 0.08); 
-  border-color: rgba(239, 68, 68, 0.2); 
-  color: var(--danger); 
+.ai-status.error {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
 }
-
 .ai-spinner {
   width: 18px; height: 18px;
   border: 2px solid transparent;
@@ -437,18 +383,12 @@ html, body {
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
 }
-
+.ai-status.success .ai-spinner,
+.ai-status.error .ai-spinner { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
 /* ===== FORM ===== */
-.form-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
+.form-section { display: flex; flex-direction: column; gap: 12px; }
 .form-group { position: relative; }
-
 .form-group label {
   display: block;
   font-size: 11px;
@@ -458,8 +398,7 @@ html, body {
   letter-spacing: 0.8px;
   margin-bottom: 6px;
 }
-
-.form-group input, .form-group select, .form-group textarea {
+.form-group input, .form-group textarea {
   width: 100%;
   padding: 12px 14px;
   background: var(--bg-input);
@@ -471,52 +410,27 @@ html, body {
   transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
 }
-
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+.form-group input:focus, .form-group textarea:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
-
-.form-group input::placeholder, .form-group textarea::placeholder {
-  color: var(--text-muted);
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 60px;
-}
-
-.form-group input.ai-filled {
+.form-group input::placeholder, .form-group textarea::placeholder { color: var(--text-muted); }
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-group input.ai-filled, .form-group textarea.ai-filled {
   border-color: rgba(34, 197, 94, 0.4);
   background: rgba(34, 197, 94, 0.05);
 }
-
-/* Low-confidence courier suggestion (amber, not green) */
-.form-group input.ai-suggest {
-  border-color: rgba(245, 158, 11, 0.5);
-  background: rgba(245, 158, 11, 0.06);
+.form-group input.field-error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
-
 .sender-chip.suggest {
   border-color: var(--warning);
   color: var(--warning);
   background: rgba(245, 158, 11, 0.1);
 }
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-/* Sender quick-select */
-.sender-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sender-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .sender-chip {
   padding: 5px 10px;
   background: var(--bg-input);
@@ -529,13 +443,11 @@ html, body {
   font-family: inherit;
   transition: all 0.15s;
 }
-
 .sender-chip:active, .sender-chip.active {
   background: rgba(59, 130, 246, 0.15);
   border-color: var(--accent);
   color: var(--accent);
 }
-
 /* Submit */
 .submit-bar {
   position: fixed;
@@ -551,7 +463,6 @@ html, body {
   display: flex;
   gap: 10px;
 }
-
 .btn-submit {
   flex: 1;
   padding: 14px;
@@ -566,10 +477,8 @@ html, body {
   transition: all 0.2s;
   letter-spacing: 0.2px;
 }
-
 .btn-submit:active { transform: scale(0.98); }
 .btn-submit:disabled { opacity: 0.4; pointer-events: none; }
-
 .btn-clear {
   padding: 14px 18px;
   background: var(--bg-card);
@@ -581,31 +490,25 @@ html, body {
   font-weight: 500;
   cursor: pointer;
 }
-
 /* Toast */
 .toast {
   position: fixed;
   top: 20px;
   left: 50%;
-  transform: translateX(-50%) translateY(-100px);
+  transform: translateX(-50%) translateY(-140px);
   padding: 12px 20px;
   border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   z-index: 1000;
   transition: transform 0.3s ease;
-  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  line-height: 1.4;
 }
-
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.success { background: var(--success); color: white; }
 .toast.error { background: var(--danger); color: white; }
-
-/* OUT form specific */
-.out-form { display: none; }
-.out-form.active { display: flex; }
-.in-form.hidden { display: none; }
-
 /* Config modal */
 .config-overlay {
   display: none;
@@ -616,19 +519,17 @@ html, body {
   align-items: flex-end;
   justify-content: center;
 }
-
 .config-overlay.active { display: flex; }
-
 .config-modal {
   background: var(--bg-card);
   border-radius: 16px 16px 0 0;
   width: 100%;
   max-width: 480px;
-  max-height: 70vh;
+  max-height: 80vh;
   overflow-y: auto;
   padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
 }
-
 .config-modal h3 {
   font-size: 16px;
   margin-bottom: 16px;
@@ -636,9 +537,13 @@ html, body {
   align-items: center;
   justify-content: space-between;
 }
-
 .config-modal .form-group { margin-bottom: 14px; }
-
+.config-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
 .config-modal .btn-save {
   width: 100%;
   padding: 12px;
@@ -652,24 +557,34 @@ html, body {
   cursor: pointer;
   margin-top: 8px;
 }
-
-.config-trigger {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--text-muted);
+.btn-diagnose {
+  width: 100%;
+  padding: 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 4px;
+  margin-top: 10px;
 }
-
-.config-trigger svg { width: 18px; height: 18px; }
-
-/* Hidden file input */
-#photoInput { display: none; }
-
+.diag-result {
+  display: none;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.diag-result.active { display: block; }
+.diag-result.ok { background: var(--success-glow); color: var(--success); }
+.diag-result.bad { background: rgba(239,68,68,0.1); color: var(--danger); }
+.diag-result.info { background: rgba(59,130,246,0.1); color: var(--accent); }
+/* Hidden file inputs */
+#photoInput, #barcodeCaptureInput { display: none; }
 /* Section label */
 .section-label {
   font-size: 11px;
@@ -682,7 +597,6 @@ html, body {
   align-items: center;
   gap: 6px;
 }
-
 .section-label::after {
   content: '';
   flex: 1;
@@ -692,25 +606,26 @@ html, body {
 </style>
 </head>
 <body>
-
 <!-- Header -->
 <div class="header">
   <div class="header-logo">SU</div>
   <div class="header-text">
     <h1>Parcel Scanner</h1>
-    <p>Singunion Agency</p>
+    <p>Singunion Agency &middot; Inbound Records</p>
   </div>
-  <div class="header-mode">
-    <button class="mode-btn active" onclick="switchMode('in')">IN</button>
-    <button class="mode-btn" onclick="switchMode('out')">OUT</button>
-  </div>
-  <button class="config-trigger" onclick="toggleConfig()">
+  <button class="config-trigger" id="configTrigger" onclick="toggleConfig()" aria-label="Settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
   </button>
 </div>
 
 <!-- Main -->
 <div class="main">
+
+  <!-- Unsent parcels queue -->
+  <div class="pending-bar" id="pendingBar">
+    <span id="pendingText"></span>
+    <button id="pendingBtn" onclick="retryPending()">Retry</button>
+  </div>
 
   <!-- Scan Section -->
   <div class="scan-section">
@@ -730,7 +645,7 @@ html, body {
       </button>
     </div>
 
-    <!-- Barcode scanner viewport -->
+    <!-- Barcode scanner viewport (desktop / Android live scan) -->
     <div class="scanner-viewport" id="scannerViewport">
       <video id="scannerVideo" autoplay playsinline muted></video>
       <canvas id="scannerCanvas" style="display:none;"></canvas>
@@ -739,21 +654,19 @@ html, body {
           <div class="scan-hint">Align barcode here</div>
         </div>
       </div>
-      <button class="scanner-close" onclick="stopBarcodeScan()">✕</button>
-      <!-- Single barcode confirmation -->
+      <button class="scanner-close" onclick="stopBarcodeScan()">&#10005;</button>
       <div class="scan-confirm" id="scanConfirm">
         <div class="scan-confirm-content">
-          <div class="scan-confirm-icon">✓</div>
+          <div class="scan-confirm-icon">&#10003;</div>
           <div class="scan-confirm-label">Barcode Detected</div>
           <div class="scan-confirm-code" id="scanConfirmCode"></div>
           <div class="scan-confirm-courier" id="scanConfirmCourier"></div>
           <div class="scan-confirm-buttons">
-            <button class="scan-confirm-btn reject" onclick="rescanBarcode()">✕ Rescan</button>
-            <button class="scan-confirm-btn accept" onclick="acceptBarcode()">✓ Use This</button>
+            <button class="scan-confirm-btn reject" onclick="rescanBarcode()">&#10005; Rescan</button>
+            <button class="scan-confirm-btn accept" onclick="acceptBarcode()">&#10003; Use This</button>
           </div>
         </div>
       </div>
-      <!-- Multi-barcode selection -->
       <div class="scan-confirm" id="scanMulti">
         <div class="scan-confirm-content">
           <div class="scan-confirm-icon" style="background:var(--accent);">?</div>
@@ -761,7 +674,7 @@ html, body {
           <div class="scan-multi-hint">Tap the correct one:</div>
           <div class="scan-multi-list" id="scanMultiList"></div>
           <div class="scan-confirm-buttons" style="margin-top:12px;">
-            <button class="scan-confirm-btn reject" onclick="rescanBarcode()">✕ Rescan</button>
+            <button class="scan-confirm-btn reject" onclick="rescanBarcode()">&#10005; Rescan</button>
           </div>
         </div>
       </div>
@@ -770,7 +683,7 @@ html, body {
     <!-- Photo preview -->
     <div class="photo-preview" id="photoPreview">
       <img id="photoImg" src="" alt="Label photo">
-      <button class="scanner-close" onclick="clearPhoto()">✕</button>
+      <button class="scanner-close" onclick="clearPhoto()">&#10005;</button>
     </div>
 
     <!-- AI Status -->
@@ -781,9 +694,8 @@ html, body {
   </div>
 
   <!-- IN Parcel Form -->
-  <div class="form-section in-form" id="inForm">
+  <div class="form-section" id="inForm">
     <div class="section-label">Parcel Details (IN)</div>
-
     <div class="form-group">
       <label>Sender / Courier</label>
       <input type="text" id="inSender" placeholder="DHL, FedEx, UPS...">
@@ -798,12 +710,10 @@ html, body {
         <button class="sender-chip" onclick="selectSender(this, 'Maritec')">Maritec</button>
       </div>
     </div>
-
     <div class="form-group">
       <label>AWB / D.O Number</label>
       <input type="text" id="inAwb" placeholder="Tracking / AWB number" style="font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;">
     </div>
-
     <div class="form-row">
       <div class="form-group">
         <label>Description</label>
@@ -814,7 +724,6 @@ html, body {
         <input type="text" id="inPieces" placeholder="1 ctn / 2 boxes">
       </div>
     </div>
-
     <div class="form-row">
       <div class="form-group">
         <label>Weight</label>
@@ -825,51 +734,17 @@ html, body {
         <input type="text" id="inGst" placeholder="Amount / NIL">
       </div>
     </div>
-
     <div class="form-group">
       <label>Company Name / Sender Name</label>
       <input type="text" id="inCompany" placeholder="Company or person name">
     </div>
-
     <div class="form-group">
       <label>Vessel Name</label>
       <input type="text" id="inVessel" placeholder="e.g. MV.VOSCO STAR">
     </div>
-
     <div class="form-group">
       <label>Remarks / Received by</label>
       <textarea id="inRemarks" placeholder="Who received it, special notes..."></textarea>
-    </div>
-  </div>
-
-  <!-- OUT Parcel Form -->
-  <div class="form-section out-form" id="outForm">
-    <div class="section-label">Parcel Details (OUT)</div>
-
-    <div class="form-group">
-      <label>Delivery Method</label>
-      <input type="text" id="outDelivery" placeholder="DHL / UParcel / Self Collect">
-      <div class="sender-chips">
-        <button class="sender-chip" onclick="selectOutDelivery(this, 'DHL')">DHL</button>
-        <button class="sender-chip" onclick="selectOutDelivery(this, 'UParcel')">UParcel</button>
-        <button class="sender-chip" onclick="selectOutDelivery(this, 'FedEx')">FedEx</button>
-        <button class="sender-chip" onclick="selectOutDelivery(this, 'Self Collect')">Self Collect</button>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>(To) Company Name</label>
-      <input type="text" id="outCompany" placeholder="Maritec / Viswalab / Nasco">
-    </div>
-
-    <div class="form-group">
-      <label>Vessel Name</label>
-      <input type="text" id="outVessel" placeholder="Vessel name">
-    </div>
-
-    <div class="form-group">
-      <label>Remarks</label>
-      <textarea id="outRemarks" placeholder="1 envelope / 1 bag / details..."></textarea>
     </div>
   </div>
 </div>
@@ -877,9 +752,7 @@ html, body {
 <!-- Submit Bar -->
 <div class="submit-bar">
   <button class="btn-clear" onclick="clearForm()">Clear</button>
-  <button class="btn-submit" id="btnSubmit" onclick="submitForm()">
-    Submit Parcel IN
-  </button>
+  <button class="btn-submit" id="btnSubmit" onclick="submitForm()">Submit Parcel IN</button>
 </div>
 
 <!-- Config Modal -->
@@ -887,19 +760,21 @@ html, body {
   <div class="config-modal">
     <h3>
       Settings
-      <button style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer" onclick="toggleConfig()">✕</button>
+      <button style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer" onclick="toggleConfig()">&#10005;</button>
     </h3>
     <div class="form-group">
       <label>Default Received By</label>
       <input type="text" id="cfgReceivedBy" placeholder="Staff name">
+      <div class="config-hint">If Remarks is left empty, this name is sent as "RECEIVED BY &lt;name&gt;".</div>
     </div>
     <button class="btn-save" onclick="saveConfig()">Save Settings</button>
+    <button class="btn-diagnose" id="btnDiagnose" onclick="runDiagnostics()">Test connection to n8n</button>
+    <div class="diag-result" id="diagResult"></div>
   </div>
 </div>
 
-<!-- Hidden photo input -->
+<!-- Hidden inputs -->
 <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
-<!-- Hidden barcode photo capture input (iOS fallback) -->
 <input type="file" id="barcodeCaptureInput" accept="image/*" capture="environment" onchange="handleBarcodeCapture(event)">
 
 <!-- Toast -->
@@ -909,69 +784,133 @@ html, body {
 <script src="https://cdn.jsdelivr.net/npm/@undecaf/zbar-wasm@0.9.15/dist/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@undecaf/barcode-detector-polyfill@0.9.23/dist/index.js"></script>
 <script>
+  // polyfill 挂载：CDN 挂了也不能让整页脚本崩掉
   try {
     window['BarcodeDetector'].getSupportedFormats();
-  } catch {
-    window['BarcodeDetector'] = barcodeDetectorPolyfill.BarcodeDetectorPolyfill;
+  } catch (e) {
+    try {
+      window['BarcodeDetector'] = barcodeDetectorPolyfill.BarcodeDetectorPolyfill;
+    } catch (e2) {
+      console.warn('BarcodeDetector unavailable — Photo Label still works.');
+    }
   }
 </script>
-
 <script>
-// ==========================================
-// CONFIG
-// ==========================================
-const CONFIG_KEY = 'su_parcel_config';
+/* ==================================================================
+   SU PARCEL SCANNER  —  对接 n8n workflow "Parcel Scanner - IN & OUT Records"
+   ------------------------------------------------------------------
+   n8n 侧对应关系（改 n8n 时这里要同步）：
+     Webhook: Photo OCR   POST /webhook/parcel-ocr-p4w8j3
+        body: { image_base64, media_type }
+        OCR Guard 限制: 图片 <= 8MB(解码后), 每天 <= 100 次
+        成功 -> 200 + OpenAI 解析出的 JSON 对象
+        被拦 -> 429 + { error, message }
+     Webhook: Parcel IN1  POST /webhook/parcel-in-k7m2x9
+        body: { sender, awb_number, description, pieces,
+                weight, gst, company_name, vessel_name, remarks }
+        成功 -> 200 + { success, message, timestamp }
+     两个 webhook 都用 Header Auth 凭证 "X-SU-Key"
+     两个 webhook 的 allowedOrigins 都是 https://ethan070707.github.io
+       -> 本页面必须部署在这个域名下，否则浏览器会拦 CORS
+   ================================================================== */
 
-// Hardcoded webhook URLs — no per-user setup needed
+// ==========================================
+// ⚠️⚠️ 认证 KEY ⚠️⚠️
+// 必须和 n8n → Credentials → "X-SU-Key" 里的 Value 一字不差。
+// n8n 那边换了 key，这里也要改，然后重新 push 到 GitHub Pages。
+// 目前这个值在服务器上返回 403（对不上），部署前请先核对！
+// ==========================================
+const SU_KEY = '__n8n_BLANK_VALUE_e5362baf-c777-4d57-a609-6eaf1f9e87f6';
+
+// Webhook 地址（n8n Production URL）
 const WEBHOOK_IN  = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-in-k7m2x9';
 const WEBHOOK_OCR = 'https://ctlee0712.app.n8n.cloud/webhook/parcel-ocr-p4w8j3';
 
-// Shared auth key — must match the "X-SU-Key" Header Auth credential value in n8n
-const SU_KEY = 'su_8fK2mQ9xL4pR7vN3wZ6bY1tD5gH0jA';
+// 前端压缩参数：压到远低于 n8n OCR Guard 的 8MB 上限
+const IMG_MAX_DIM   = 1600;   // 长边像素
+const IMG_QUALITY   = 0.8;    // JPEG 质量
+const IMG_HARD_CAP  = 7.0;    // MB，解码后大小的自我保险（n8n 上限 8MB）
 
+// 超时
+const TIMEOUT_OCR    = 90000;
+const TIMEOUT_SUBMIT = 30000;
+
+const CONFIG_KEY  = 'su_parcel_config';
+const PENDING_KEY = 'su_parcel_pending';
+
+// ==========================================
+// SETTINGS
+// ==========================================
 function loadConfig() {
-  try {
-    return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
-  } catch { return {}; }
+  try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; }
+  catch { return {}; }
 }
-
 function saveConfig() {
-  const config = {
-    receivedBy: document.getElementById('cfgReceivedBy').value.trim()
-  };
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  const config = { receivedBy: document.getElementById('cfgReceivedBy').value.trim() };
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch {}
   toggleConfig();
   showToast('Settings saved', 'success');
 }
-
 function populateConfig() {
   const cfg = loadConfig();
   document.getElementById('cfgReceivedBy').value = cfg.receivedBy || '';
 }
-
 function toggleConfig() {
   const overlay = document.getElementById('configOverlay');
   overlay.classList.toggle('active');
-  if (overlay.classList.contains('active')) populateConfig();
+  if (overlay.classList.contains('active')) {
+    populateConfig();
+    const dr = document.getElementById('diagResult');
+    dr.className = 'diag-result';
+    dr.textContent = '';
+  }
 }
-
 function closeConfigIfOutside(e) {
   if (e.target === e.currentTarget) toggleConfig();
 }
 
 // ==========================================
-// MODE SWITCHING
+// NETWORK HELPERS
 // ==========================================
-let currentMode = 'in';
+function fetchWithTimeout(url, options, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, Object.assign({}, options, { signal: ctrl.signal }))
+    .finally(() => clearTimeout(timer));
+}
 
-function switchMode(mode) {
-  currentMode = mode;
-  document.querySelectorAll('.mode-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', (i === 0 && mode === 'in') || (i === 1 && mode === 'out'));
-  });
-  document.getElementById('inForm').classList.toggle('hidden', mode === 'out');
-  document.getElementById('outForm').classList.toggle('active', mode === 'out');
-  document.getElementById('btnSubmit').textContent = mode === 'in' ? 'Submit Parcel IN' : 'Submit Parcel OUT';
+// 把 n8n / Cloudflare 返回的各种错误翻成人话
+async function describeError(response) {
+  let raw = '';
+  try { raw = await response.text(); } catch {}
+  let msg = '';
+  try {
+    const j = JSON.parse(raw);
+    if (j && j.message) msg = j.message;
+  } catch { msg = (raw || '').slice(0, 160); }
+
+  if (response.status === 401 || response.status === 403) {
+    return 'Auth failed (' + response.status + ') — the app key no longer matches n8n. Please contact the administrator.';
+  }
+  if (response.status === 404) {
+    return 'Webhook not found (404) — the n8n workflow may be deactivated.';
+  }
+  if (response.status === 413) {
+    return 'Image rejected by server (413) — too large.';
+  }
+  if (response.status === 429) {
+    return msg || 'Daily OCR limit reached. Please type the details manually.';
+  }
+  if (response.status >= 500) {
+    return 'n8n server error (' + response.status + '). Please try again shortly.';
+  }
+  return msg || ('Server error ' + response.status);
+}
+
+function describeNetworkError(err) {
+  if (err && err.name === 'AbortError') return 'Request timed out — check your connection and retry.';
+  if (err instanceof TypeError) return 'Cannot reach n8n — no network, or this page is not served from the allowed domain.';
+  return err && err.message ? err.message : 'Unknown error';
 }
 
 // ==========================================
@@ -981,42 +920,55 @@ let scannerStream = null;
 let scanInterval = null;
 let pendingBarcode = null;
 let stableDetections = {};
-let currentScanMode = 'barcode'; // 'barcode' or 'qr'
+let currentScanMode = 'barcode';           // 'barcode' | 'qr'
+let activeScanBtnId = null;
 const STABLE_THRESHOLD = 3;
-
-const BARCODE_FORMATS = ['code_128', 'code_39', 'ean_13', 'ean_8', 'data_matrix', 'itf'];
+const BARCODE_FORMATS = ['code_128', 'code_39', 'ean_13', 'ean_8', 'itf'];
 const QR_FORMATS = ['qr_code'];
 
 function getScanFormats() {
   return currentScanMode === 'qr' ? QR_FORMATS : BARCODE_FORMATS;
 }
 
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function startBarcodeScan() {
   currentScanMode = 'barcode';
-  // iOS: skip getUserMedia, directly open camera for photo capture
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (isIOS) {
-    document.getElementById('barcodeCaptureInput').click();
-    return;
-  }
+  // iOS 维持拍照解码（不走实时取景）
+  if (isIOS()) { document.getElementById('barcodeCaptureInput').click(); return; }
   startScanner('btnBarcode');
 }
 
 function startQRScan() {
   currentScanMode = 'qr';
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (isIOS) {
-    document.getElementById('barcodeCaptureInput').click();
-    return;
-  }
+  if (isIOS()) { document.getElementById('barcodeCaptureInput').click(); return; }
   startScanner('btnQR');
+}
+
+// 创建 detector：某些浏览器不支持部分格式会抛错，这里逐个降级
+function makeDetector() {
+  if (!('BarcodeDetector' in window)) return null;
+  const wanted = getScanFormats();
+  try { return new BarcodeDetector({ formats: wanted }); } catch (e) {}
+  try { return new BarcodeDetector(); } catch (e) {}
+  return null;
 }
 
 async function startScanner(triggerBtnId) {
   const viewport = document.getElementById('scannerViewport');
   const video = document.getElementById('scannerVideo');
   stableDetections = {};
-  
+  activeScanBtnId = triggerBtnId;
+
+  const detector = makeDetector();
+  if (!detector) {
+    showToast('Scanner not supported here — use Photo Label', 'error');
+    return;
+  }
+
   try {
     scannerStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -1025,54 +977,56 @@ async function startScanner(triggerBtnId) {
     await video.play();
     viewport.classList.add('active');
     document.getElementById(triggerBtnId).classList.add('scanning');
-
-    if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: getScanFormats() });
-      
-      scanInterval = setInterval(async () => {
-        try {
-          const centerCodes = await detectCenterRegion(detector, video);
-          
-          if (centerCodes.length === 0) {
-            for (const key in stableDetections) {
-              stableDetections[key] = Math.max(0, stableDetections[key] - 1);
-            }
-            return;
-          }
-          
-          const uniqueCodes = [...new Set(centerCodes.map(c => c.rawValue))];
-          
-          uniqueCodes.forEach(code => {
-            stableDetections[code] = (stableDetections[code] || 0) + 1;
-          });
-          
-          const stableCodes = uniqueCodes.filter(code => stableDetections[code] >= STABLE_THRESHOLD);
-          
-          if (stableCodes.length === 0) return;
-          
-          // Pause scanning
-          if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
-          
-          if (stableCodes.length === 1) {
-            showSingleConfirm(stableCodes[0]);
-          } else {
-            showMultiSelect(stableCodes);
-          }
-          
-        } catch (e) { /* scanning... */ }
-      }, 300);
-    } else {
-      showToast('Barcode scanner loading failed — try Photo Label', 'error');
-      setTimeout(() => stopBarcodeScan(), 1500);
-    }
+    startScanLoop(detector);
   } catch (err) {
     console.error('Camera error:', err);
+    // 关键修复：失败时一定要把已经打开的摄像头关掉
+    if (scannerStream) {
+      scannerStream.getTracks().forEach(t => t.stop());
+      scannerStream = null;
+    }
     showToast('Camera not available — use Photo Label', 'error');
   }
 }
 
-function scanFallbackCapture() {
-  document.getElementById('barcodeCaptureInput').click();
+// 扫描循环（原来 startScanner 和 rescanBarcode 里各写了一份，现在共用）
+function startScanLoop(detector) {
+  const video = document.getElementById('scannerVideo');
+  if (scanInterval) { clearInterval(scanInterval); }
+  scanInterval = setInterval(async () => {
+    try {
+      const centerCodes = await detectCenterRegion(detector, video);
+
+      if (centerCodes.length === 0) {
+        for (const key in stableDetections) {
+          stableDetections[key] = Math.max(0, stableDetections[key] - 1);
+        }
+        return;
+      }
+
+      const uniqueCodes = [...new Set(centerCodes.map(c => c.rawValue).filter(Boolean))];
+      uniqueCodes.forEach(code => {
+        stableDetections[code] = (stableDetections[code] || 0) + 1;
+      });
+
+      const stableCodes = uniqueCodes.filter(code => stableDetections[code] >= STABLE_THRESHOLD);
+      if (stableCodes.length === 0) return;
+
+      clearInterval(scanInterval);
+      scanInterval = null;
+
+      if (stableCodes.length === 1) showSingleConfirm(stableCodes[0]);
+      else showMultiSelect(stableCodes);
+    } catch (e) { /* 单帧解码失败，继续扫 */ }
+  }, 300);
+}
+
+function rescanBarcode() {
+  pendingBarcode = null;
+  stableDetections = {};
+  hideAllOverlays();
+  const detector = makeDetector();
+  if (detector && scannerStream) startScanLoop(detector);
 }
 
 async function handleBarcodeCapture(event) {
@@ -1080,37 +1034,41 @@ async function handleBarcodeCapture(event) {
   event.target.value = '';
   if (!file) return;
 
-  const img = new Image();
+  const detector = makeDetector();
+  if (!detector) {
+    showToast('Scanner not available — use Photo Label', 'error');
+    return;
+  }
+
   const url = URL.createObjectURL(file);
+  const img = new Image();
   img.onload = async () => {
     try {
-      if ('BarcodeDetector' in window) {
-        const detector = new BarcodeDetector({ formats: getScanFormats() });
-        const barcodes = await detector.detect(img);
-        const uniqueCodes = [...new Set(barcodes.map(b => b.rawValue).filter(v => v))];
-
-        if (uniqueCodes.length === 0) {
-          showToast('No barcode found — try again or use Photo Label', 'error');
-        } else if (uniqueCodes.length === 1) {
-          pendingBarcode = uniqueCodes[0];
-          acceptBarcode();
-        } else {
-          const choices = uniqueCodes.map((c, i) => `${i + 1}. ${c}`).join('\n');
-          const pick = prompt(`Multiple barcodes found:\n${choices}\n\nEnter number:`);
-          const idx = parseInt(pick) - 1;
-          if (idx >= 0 && idx < uniqueCodes.length) {
-            pendingBarcode = uniqueCodes[idx];
-            acceptBarcode();
-          }
-        }
+      const barcodes = await detector.detect(img);
+      const uniqueCodes = [...new Set(barcodes.map(b => b.rawValue).filter(Boolean))];
+      if (uniqueCodes.length === 0) {
+        showToast('No barcode found — try again or use Photo Label', 'error');
+      } else if (uniqueCodes.length === 1) {
+        pendingBarcode = uniqueCodes[0];
+        acceptBarcode();
       } else {
-        showToast('Barcode scanner not available — use Photo Label', 'error');
+        const choices = uniqueCodes.map((c, i) => (i + 1) + '. ' + c).join('\n');
+        const pick = prompt('Multiple barcodes found:\n' + choices + '\n\nEnter number:');
+        const idx = parseInt(pick, 10) - 1;
+        if (idx >= 0 && idx < uniqueCodes.length) {
+          pendingBarcode = uniqueCodes[idx];
+          acceptBarcode();
+        }
       }
     } catch (err) {
       console.error('Barcode capture error:', err);
       showToast('Scan failed — use Photo Label instead', 'error');
     }
     URL.revokeObjectURL(url);
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    showToast('Could not read that photo — use Photo Label', 'error');
   };
   img.src = url;
 }
@@ -1119,20 +1077,18 @@ async function detectCenterRegion(detector, video) {
   const canvas = document.getElementById('scannerCanvas');
   const vw = video.videoWidth;
   const vh = video.videoHeight;
-  
-  if (vw === 0 || vh === 0) return [];
-  
+  if (!vw || !vh) return [];
+
   const cropW = vw * 0.70;
   const cropH = vh * 0.50;
   const cropX = (vw - cropW) / 2;
   const cropY = (vh - cropH) / 2;
-  
-  canvas.width = cropW;
-  canvas.height = cropH;
-  
+
+  if (canvas.width !== Math.round(cropW))  canvas.width  = Math.round(cropW);
+  if (canvas.height !== Math.round(cropH)) canvas.height = Math.round(cropH);
+
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-  
+  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
   return await detector.detect(canvas);
 }
 
@@ -1144,11 +1100,9 @@ function hideAllOverlays() {
 function showSingleConfirm(code) {
   pendingBarcode = code;
   document.getElementById('scanConfirmCode').textContent = code;
-  
   const { courier, confidence } = detectCourier(code);
   document.getElementById('scanConfirmCourier').textContent =
-    courier ? (confidence === 'high' ? `Detected: ${courier}` : `Possibly: ${courier} — please confirm`) : '';
-  
+    courier ? (confidence === 'high' ? 'Detected: ' + courier : 'Possibly: ' + courier + ' — please confirm') : '';
   hideAllOverlays();
   document.getElementById('scanConfirm').classList.add('active');
 }
@@ -1156,29 +1110,29 @@ function showSingleConfirm(code) {
 function showMultiSelect(codes) {
   const list = document.getElementById('scanMultiList');
   list.innerHTML = '';
-  
-  // High-confidence matches first, so the likely-correct code is on top
+
   const ranked = codes
-    .map(code => ({ code, ...detectCourier(code) }))
+    .map(code => Object.assign({ code }, detectCourier(code)))
     .sort((a, b) => (b.confidence === 'high' ? 1 : 0) - (a.confidence === 'high' ? 1 : 0));
-  
+
   ranked.forEach(({ code, courier }) => {
+    // 用 textContent，条码/QR 内容可能含 < > 等字符
     const item = document.createElement('div');
     item.className = 'scan-multi-item';
-    item.innerHTML = `
-      <span class="scan-multi-item-code">${code}</span>
-      <span class="scan-multi-item-courier">${courier || ''}</span>
-    `;
-    item.onclick = () => selectFromMulti(code);
+    const codeEl = document.createElement('span');
+    codeEl.className = 'scan-multi-item-code';
+    codeEl.textContent = code;
+    const courEl = document.createElement('span');
+    courEl.className = 'scan-multi-item-courier';
+    courEl.textContent = courier || '';
+    item.appendChild(codeEl);
+    item.appendChild(courEl);
+    item.onclick = () => showSingleConfirm(code);
     list.appendChild(item);
   });
-  
+
   hideAllOverlays();
   document.getElementById('scanMulti').classList.add('active');
-}
-
-function selectFromMulti(code) {
-  showSingleConfirm(code);
 }
 
 function stopBarcodeScan() {
@@ -1190,119 +1144,78 @@ function stopBarcodeScan() {
   hideAllOverlays();
   pendingBarcode = null;
   stableDetections = {};
+  activeScanBtnId = null;
 }
 
 function acceptBarcode() {
   const code = pendingBarcode;
   if (!code) return;
-  
+
   stopBarcodeScan();
-  showToast('Barcode accepted ✓', 'success');
-  
+
   const awbEl = document.getElementById('inAwb');
   awbEl.value = code;
   awbEl.classList.add('ai-filled');
-  
+  awbEl.classList.remove('field-error');
+
   const senderEl = document.getElementById('inSender');
   const { courier, confidence } = detectCourier(code);
-  
-  // Reset any previous courier state
-  senderEl.classList.remove('ai-filled', 'ai-suggest');
+
+  senderEl.classList.remove('ai-filled');
   document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
     chip.classList.remove('active', 'suggest');
   });
-  
-  if (courier) {
-    if (confidence === 'high') {
-      // High confidence: auto-fill + green
-      senderEl.value = courier;
-      senderEl.classList.add('ai-filled');
-      document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
-        chip.classList.toggle('active', chip.textContent === courier);
-      });
-    } else {
-      // Low confidence: DON'T fill the field — just highlight the chip as a suggestion (amber)
-      document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
-        chip.classList.toggle('suggest', chip.textContent === courier);
-      });
-      showToast(`Courier guess: ${courier} — tap to confirm`, 'success');
-    }
-  }
-  
-  pendingBarcode = null;
-}
 
-function rescanBarcode() {
-  pendingBarcode = null;
-  stableDetections = {};
-  hideAllOverlays();
-  
-  // Resume scanning
-  if ('BarcodeDetector' in window) {
-    const detector = new BarcodeDetector({ formats: getScanFormats() });
-    const video = document.getElementById('scannerVideo');
-    scanInterval = setInterval(async () => {
-      try {
-        const centerCodes = await detectCenterRegion(detector, video);
-        if (centerCodes.length === 0) {
-          for (const key in stableDetections) {
-            stableDetections[key] = Math.max(0, stableDetections[key] - 1);
-          }
-          return;
-        }
-        const uniqueCodes = [...new Set(centerCodes.map(c => c.rawValue))];
-        uniqueCodes.forEach(code => {
-          stableDetections[code] = (stableDetections[code] || 0) + 1;
-        });
-        const stableCodes = uniqueCodes.filter(code => stableDetections[code] >= STABLE_THRESHOLD);
-        if (stableCodes.length === 0) return;
-        if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
-        if (stableCodes.length === 1) {
-          showSingleConfirm(stableCodes[0]);
-        } else {
-          showMultiSelect(stableCodes);
-        }
-      } catch (e) { /* scanning... */ }
-    }, 300);
+  if (courier && confidence === 'high') {
+    senderEl.value = courier;
+    senderEl.classList.add('ai-filled');
+    document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.textContent.trim() === courier);
+    });
+    showToast('Barcode accepted — ' + courier, 'success');
+  } else if (courier) {
+    // 低置信度：只把 chip 标黄提示，不自动填
+    document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
+      chip.classList.toggle('suggest', chip.textContent.trim() === courier);
+    });
+    showToast('Barcode accepted — courier guess: ' + courier + ', tap to confirm', 'success');
+  } else {
+    showToast('Barcode accepted', 'success');
   }
+
+  pendingBarcode = null;
 }
 
 // ==========================================
 // COURIER DETECTION
-// Returns { courier: string|null, confidence: 'high'|'low'|null }
-//   high  -> unambiguous alphabetic prefix, safe to auto-fill
-//   low   -> pure-numeric guess by length, may be wrong, suggest only
+//   high -> 字母前缀可确定，自动填
+//   low  -> 纯数字按长度猜，只提示不填
 // ==========================================
 function detectCourier(raw) {
   if (!raw) return { courier: null, confidence: null };
-
-  // Step 0: normalise — strip spaces / dashes / slashes / dots, uppercase
   const tn = String(raw).toUpperCase().replace(/[\s\-\/\.]/g, '');
 
-  // Tier 1: alphabetic prefixes (unambiguous -> high confidence)
   const PREFIX_RULES = [
     { re: /^1Z[0-9A-Z]{16}$/,   courier: 'UPS' },
     { re: /^SF\d{13,15}$/,      courier: 'SF Express' },
     { re: /^JT\d{12,16}$/,      courier: 'J&T Express' },
     { re: /^SPNDD\d{8,10}$/,    courier: 'Singpost' },
-    { re: /^[A-Z]{2}\d{9}SG$/,  courier: 'Singpost' },   // S10 international format
+    { re: /^[A-Z]{2}\d{9}SG$/,  courier: 'Singpost' },
     { re: /^GE\d{9}[A-Z]{2}$/,  courier: 'TNT' },
-    { re: /^JJD\d{10,18}$/,     courier: 'DHL' },         // DHL routing barcode
+    { re: /^JJD\d{10,18}$/,     courier: 'DHL' },
     { re: /^JVGL\d{10,18}$/,    courier: 'DHL' }
   ];
   for (const r of PREFIX_RULES) {
     if (r.re.test(tn)) return { courier: r.courier, confidence: 'high' };
   }
 
-  // Tier 2: pure numeric — ambiguous, best guess only (low confidence)
   if (/^\d+$/.test(tn)) {
     const len = tn.length;
-    if (len === 9)                 return { courier: 'TNT',   confidence: 'low' };
-    if (len === 10 || len === 11)  return { courier: 'DHL',   confidence: 'low' };
-    if (len === 12)                return { courier: 'FedEx', confidence: 'low' };
-    if (len >= 14 && len <= 22)    return { courier: 'FedEx', confidence: 'low' };
+    if (len === 9)                return { courier: 'TNT',   confidence: 'low' };
+    if (len === 10 || len === 11) return { courier: 'DHL',   confidence: 'low' };
+    if (len === 12)               return { courier: 'FedEx', confidence: 'low' };
+    if (len >= 14 && len <= 22)   return { courier: 'FedEx', confidence: 'low' };
   }
-
   return { courier: null, confidence: null };
 }
 
@@ -1313,119 +1226,171 @@ function takePhoto() {
   document.getElementById('photoInput').click();
 }
 
-async function handlePhoto(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  // Show preview
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const base64Full = e.target.result;
-    const base64Data = base64Full.split(',')[1];
-    
-    document.getElementById('photoImg').src = base64Full;
-    document.getElementById('photoPreview').classList.add('active');
-    
-    // Send to AI Vision API for OCR
-    await analyzeWithAI(base64Data, file.type);
-  };
-  reader.readAsDataURL(file);
-  
-  // Reset input so same file can be selected again
-  event.target.value = '';
+// 关键改动：先压缩再上传
+// 1) 手机原图 3–8MB，base64 后再涨 33%，会顶到 n8n OCR Guard 的 8MB 上限
+// 2) 统一转成 image/jpeg，避免 iPhone HEIC 让 OpenAI Vision 拒收
+function compressImage(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      if (!w || !h) { reject(new Error('Invalid image')); return; }
+      const scale = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale));
+      h = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      resolve({ dataUrl: dataUrl, base64: dataUrl.split(',')[1] || '', width: w, height: h });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Cannot read this photo. If your iPhone saves HEIC, set Camera > Formats > Most Compatible.'));
+    };
+    img.src = url;
+  });
 }
 
-async function analyzeWithAI(base64Data, mediaType) {
+function base64SizeMB(b64) {
+  return (b64.length * 0.75) / (1024 * 1024);
+}
+
+async function handlePhoto(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+
   const status = document.getElementById('aiStatus');
   const statusText = document.getElementById('aiStatusText');
   status.className = 'ai-status active';
-  statusText.textContent = 'Analyzing shipping label with AI...';
+  statusText.textContent = 'Preparing photo...';
 
   try {
-    const response = await fetch(WEBHOOK_OCR, {
+    let out = await compressImage(file, IMG_MAX_DIM, IMG_QUALITY);
+
+    // 极端情况下再压一轮，确保远低于 n8n 的 8MB 上限
+    let q = IMG_QUALITY;
+    while (base64SizeMB(out.base64) > IMG_HARD_CAP && q > 0.4) {
+      q -= 0.15;
+      out = await compressImage(file, 1200, q);
+    }
+    if (base64SizeMB(out.base64) > IMG_HARD_CAP) {
+      throw new Error('Photo is too large even after compression — please retake it closer to the label.');
+    }
+
+    document.getElementById('photoImg').src = out.dataUrl;
+    document.getElementById('photoPreview').classList.add('active');
+
+    const beforeMB = (file.size / (1024 * 1024)).toFixed(1);
+    const afterMB  = base64SizeMB(out.base64).toFixed(2);
+    await analyzeWithAI(out.base64, beforeMB, afterMB);
+  } catch (err) {
+    console.error('Photo error:', err);
+    status.className = 'ai-status active error';
+    statusText.textContent = '✕ ' + (err.message || 'Could not process the photo');
+    setTimeout(() => { status.className = 'ai-status'; }, 6000);
+  }
+}
+
+async function analyzeWithAI(base64Data, beforeMB, afterMB) {
+  const status = document.getElementById('aiStatus');
+  const statusText = document.getElementById('aiStatusText');
+  status.className = 'ai-status active';
+  statusText.textContent = 'Analyzing label with AI... (' + beforeMB + ' MB → ' + afterMB + ' MB)';
+
+  try {
+    const response = await fetchWithTimeout(WEBHOOK_OCR, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-SU-Key': SU_KEY
-      },
-      body: JSON.stringify({
-        image_base64: base64Data,
-        media_type: mediaType
-      })
-    });
+      headers: { 'Content-Type': 'application/json', 'X-SU-Key': SU_KEY },
+      // n8n OCR Guard 读的就是这两个字段
+      body: JSON.stringify({ image_base64: base64Data, media_type: 'image/jpeg' })
+    }, TIMEOUT_OCR);
 
-    // Surface server-side rejections (e.g. daily OCR limit -> 429) with a friendly message
-    if (!response.ok) {
-      let msg = `Server error: ${response.status}`;
-      try {
-        const j = JSON.parse(await response.text());
-        if (j && j.message) msg = j.message;
-      } catch (e) { /* keep default */ }
-      throw new Error(msg);
-    }
+    if (!response.ok) throw new Error(await describeError(response));
 
-    const text = await response.text();
-    
-    // Parse JSON from response (n8n returns the OpenAI content as JSON string)
-    let parsed;
-    try {
-      let data = text;
-      // Handle double-encoded JSON (string within string)
-      if (typeof data === 'string' && data.startsWith('"')) {
-        data = JSON.parse(data);
-      }
-      if (typeof data === 'string') {
-        const jsonMatch = data.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : data);
-      } else {
-        parsed = data;
-      }
-    } catch {
-      throw new Error('Could not parse AI response');
-    }
+    // n8n "Respond: OCR Result" 直接返回解析好的 JSON 对象
+    const parsed = await parseOcrResponse(response);
+    const filled = fillFormFromAI(parsed);
 
-    // Fill form fields
-    fillFormFromAI(parsed);
-    
     status.className = 'ai-status active success';
-    statusText.textContent = '✓ Label analyzed — fields pre-filled';
-    setTimeout(() => { status.className = 'ai-status'; }, 4000);
-
+    statusText.textContent = filled > 0
+      ? '✓ Label analyzed — ' + filled + ' field(s) pre-filled. Please verify.'
+      : '✓ Analyzed, but nothing could be read. Please type it in.';
+    setTimeout(() => { status.className = 'ai-status'; }, 5000);
   } catch (err) {
     console.error('AI analysis error:', err);
+    const msg = (err && err.message) ? err.message : describeNetworkError(err);
     status.className = 'ai-status active error';
-    statusText.textContent = `✕ ${err.message}`;
-    setTimeout(() => { status.className = 'ai-status'; }, 5000);
+    statusText.textContent = '✕ ' + msg;
+    if (/Auth failed/.test(msg)) document.getElementById('configTrigger').classList.add('alert');
+    setTimeout(() => { status.className = 'ai-status'; }, 8000);
   }
+}
+
+async function parseOcrResponse(response) {
+  const text = await response.text();
+  let data = text;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Could not read the AI response');
+    data = JSON.parse(m[0]);
+  }
+  // 有些 n8n 配置会二次编码成字符串
+  if (typeof data === 'string') {
+    const m = data.match(/\{[\s\S]*\}/);
+    data = JSON.parse(m ? m[0] : data);
+  }
+  if (Array.isArray(data)) data = data[0] || {};
+  if (data && typeof data.output === 'object' && data.output) data = data.output;
+  if (!data || typeof data !== 'object') throw new Error('Could not read the AI response');
+  return data;
 }
 
 function fillFormFromAI(data) {
   const fields = [
-    ['inSender', data.sender_courier],
-    ['inAwb', data.awb_number],
+    ['inSender',      data.sender_courier],
+    ['inAwb',         data.awb_number],
     ['inDescription', data.description],
-    ['inPieces', data.pieces],
-    ['inWeight', data.weight],
-    ['inGst', data.gst],
-    ['inCompany', data.company_name],
-    ['inVessel', data.vessel_name],
-    ['inRemarks', data.remarks]
+    ['inPieces',      data.pieces],
+    ['inWeight',      data.weight],
+    ['inGst',         data.gst],
+    ['inCompany',     data.company_name],
+    ['inVessel',      data.vessel_name],
+    ['inRemarks',     data.remarks]
   ];
 
-  fields.forEach(([id, value]) => {
-    if (value && value.trim() !== '') {
-      const el = document.getElementById(id);
-      el.value = value;
-      el.classList.add('ai-filled');
-      
-      // Auto-highlight sender chip
-      if (id === 'inSender') {
-        document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
-          chip.classList.toggle('active', chip.textContent.toLowerCase() === value.toLowerCase());
-        });
-      }
+  let count = 0;
+  fields.forEach(([id, rawValue]) => {
+    // 修复：OpenAI 可能返回数字（pieces: 1 / weight: 5.2），原来直接 .trim() 会抛异常
+    if (rawValue === null || rawValue === undefined) return;
+    const value = String(rawValue).trim();
+    if (value === '' || value.toLowerCase() === 'null') return;
+
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value;
+    el.classList.add('ai-filled');
+    el.classList.remove('field-error');
+    count++;
+
+    if (id === 'inSender') {
+      document.querySelectorAll('#inForm .sender-chip').forEach(chip => {
+        chip.classList.remove('suggest');
+        chip.classList.toggle('active', chip.textContent.trim().toLowerCase() === value.toLowerCase());
+      });
     }
   });
+  return count;
 }
 
 function clearPhoto() {
@@ -1441,62 +1406,183 @@ function selectSender(chip, name) {
   chip.classList.add('active');
   const senderEl = document.getElementById('inSender');
   senderEl.value = name;
-  senderEl.classList.remove('ai-suggest');
+  senderEl.classList.remove('field-error');
 }
 
-function selectOutDelivery(chip, name) {
-  document.querySelectorAll('#outForm .sender-chip').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
-  document.getElementById('outDelivery').value = name;
+// ==========================================
+// PENDING QUEUE — 提交失败的单子不丢
+// 只做「手动重发」，不自动重试，避免 Google Sheet 里出现重复行
+// ==========================================
+function getPending() {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY)) || []; }
+  catch { return []; }
+}
+function setPending(list) {
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify(list)); } catch {}
+  renderPending();
+}
+function renderPending() {
+  const list = getPending();
+  const bar = document.getElementById('pendingBar');
+  const txt = document.getElementById('pendingText');
+  if (!list.length) { bar.classList.remove('active'); return; }
+  const first = list[0];
+  txt.textContent = list.length + ' parcel(s) not submitted (' +
+    (first.awb_number || first.sender || 'no AWB') + (list.length > 1 ? ', ...' : '') + ')';
+  bar.classList.add('active');
+}
+async function retryPending() {
+  const btn = document.getElementById('pendingBtn');
+  let list = getPending();
+  if (!list.length) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  let sent = 0;
+
+  while (list.length) {
+    const item = list[0];
+    try {
+      const res = await fetchWithTimeout(WEBHOOK_IN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-SU-Key': SU_KEY },
+        body: JSON.stringify(item)
+      }, TIMEOUT_SUBMIT);
+      if (!res.ok) throw new Error(await describeError(res));
+      list = list.slice(1);
+      setPending(list);
+      sent++;
+    } catch (err) {
+      showToast('Retry stopped: ' + ((err && err.message) || describeNetworkError(err)), 'error');
+      break;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Retry';
+  if (sent > 0) showToast(sent + ' parcel(s) submitted', 'success');
+  renderPending();
 }
 
 // ==========================================
 // FORM SUBMISSION
+// payload 字段名必须和 n8n "Format IN Data1" 里读的一致
 // ==========================================
-async function submitForm() {
-  // OUT is handled by a separate system now; guard against accidental OUT submits
-  if (currentMode !== 'in') {
-    showToast('OUT is handled by another system', 'error');
-    return;
+function buildPayload() {
+  const cfg = loadConfig();
+  const val = id => document.getElementById(id).value.trim();
+  let remarks = val('inRemarks');
+  if (!remarks && cfg.receivedBy) remarks = 'RECEIVED BY ' + cfg.receivedBy;
+
+  return {
+    type:         'IN',
+    sender:       val('inSender'),
+    awb_number:   val('inAwb'),
+    description:  val('inDescription'),
+    pieces:       val('inPieces'),
+    weight:       val('inWeight'),
+    gst:          val('inGst'),
+    company_name: val('inCompany'),
+    vessel_name:  val('inVessel'),
+    remarks:      remarks
+  };
+}
+
+function validate(payload) {
+  document.getElementById('inAwb').classList.remove('field-error');
+  document.getElementById('inSender').classList.remove('field-error');
+  if (!payload.awb_number && !payload.sender) {
+    document.getElementById('inAwb').classList.add('field-error');
+    document.getElementById('inSender').classList.add('field-error');
+    showToast('Enter at least an AWB number or a courier', 'error');
+    return false;
   }
+  return true;
+}
+
+async function submitForm() {
+  const payload = buildPayload();
+  if (!validate(payload)) return;
 
   const btn = document.getElementById('btnSubmit');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  const payload = {
-    type: 'IN',
-    sender: document.getElementById('inSender').value,
-    awb_number: document.getElementById('inAwb').value,
-    description: document.getElementById('inDescription').value,
-    pieces: document.getElementById('inPieces').value,
-    weight: document.getElementById('inWeight').value,
-    gst: document.getElementById('inGst').value,
-    company_name: document.getElementById('inCompany').value,
-    vessel_name: document.getElementById('inVessel').value,
-    remarks: document.getElementById('inRemarks').value
-  };
-
   try {
-    const response = await fetch(WEBHOOK_IN, {
+    const response = await fetchWithTimeout(WEBHOOK_IN, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-SU-Key': SU_KEY
-      },
+      headers: { 'Content-Type': 'application/json', 'X-SU-Key': SU_KEY },
       body: JSON.stringify(payload)
-    });
+    }, TIMEOUT_SUBMIT);
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    showToast('Parcel IN recorded ✓', 'success');
+    if (!response.ok) throw new Error(await describeError(response));
+
+    // n8n "Respond: IN Success1" 返回 { success, message, timestamp }
+    let stamp = '';
+    try {
+      const j = JSON.parse(await response.text());
+      if (j && j.timestamp) stamp = ' · ' + j.timestamp;
+    } catch {}
+
+    showToast('Parcel IN recorded ✓' + stamp, 'success');
     clearForm();
   } catch (err) {
     console.error('Submit error:', err);
-    showToast(`Submit failed: ${err.message}`, 'error');
+    const msg = (err && err.message) ? err.message : describeNetworkError(err);
+
+    // 失败的单子存起来，人工点 Retry 重发，绝不静默丢数据
+    const list = getPending();
+    list.push(payload);
+    setPending(list);
+
+    if (/Auth failed/.test(msg)) document.getElementById('configTrigger').classList.add('alert');
+    showToast('Not submitted — saved locally. ' + msg, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = currentMode === 'in' ? 'Submit Parcel IN' : 'Submit Parcel OUT';
+    btn.textContent = 'Submit Parcel IN';
+  }
+}
+
+// ==========================================
+// DIAGNOSTICS — 一键判断 key 对不对
+// 故意不带图片：n8n OCR Guard 的第 1 道校验会返回 NO_IMAGE(429)，
+// 这条路径不会消耗每日 100 次的额度。
+// ==========================================
+async function runDiagnostics() {
+  const btn = document.getElementById('btnDiagnose');
+  const box = document.getElementById('diagResult');
+  btn.disabled = true;
+  btn.textContent = 'Testing...';
+  box.className = 'diag-result active info';
+  box.textContent = 'Contacting n8n...';
+
+  try {
+    const res = await fetchWithTimeout(WEBHOOK_OCR, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-SU-Key': SU_KEY },
+      body: JSON.stringify({ media_type: 'image/jpeg' })
+    }, 20000);
+
+    if (res.status === 429 || res.ok) {
+      box.className = 'diag-result active ok';
+      box.textContent = '✓ Connection OK. Webhook reachable and the key is accepted.';
+      document.getElementById('configTrigger').classList.remove('alert');
+    } else if (res.status === 401 || res.status === 403) {
+      box.className = 'diag-result active bad';
+      box.textContent = '✕ Key rejected (' + res.status + ').\nThe value in this app does not match the "X-SU-Key" credential in n8n. The administrator needs to update and redeploy the app.';
+    } else if (res.status === 404) {
+      box.className = 'diag-result active bad';
+      box.textContent = '✕ Webhook not found (404).\nThe n8n workflow is probably deactivated.';
+    } else {
+      box.className = 'diag-result active bad';
+      box.textContent = '✕ Unexpected response ' + res.status + '.\n' + (await describeError(res));
+    }
+  } catch (err) {
+    box.className = 'diag-result active bad';
+    box.textContent = '✕ ' + describeNetworkError(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Test connection to n8n';
   }
 }
 
@@ -1504,36 +1590,35 @@ async function submitForm() {
 // UTILITIES
 // ==========================================
 function clearForm() {
-  // Clear IN form
-  ['inSender', 'inAwb', 'inDescription', 'inPieces', 'inWeight', 'inGst', 'inCompany', 'inVessel', 'inRemarks'].forEach(id => {
-    const el = document.getElementById(id);
-    el.value = '';
-    el.classList.remove('ai-filled', 'ai-suggest');
-  });
-  // Clear OUT form
-  ['outDelivery', 'outCompany', 'outVessel', 'outRemarks'].forEach(id => {
-    const el = document.getElementById(id);
-    el.value = '';
-    el.classList.remove('ai-filled', 'ai-suggest');
-  });
-  // Clear chips
+  ['inSender','inAwb','inDescription','inPieces','inWeight','inGst','inCompany','inVessel','inRemarks']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      el.value = '';
+      el.classList.remove('ai-filled', 'field-error');
+    });
   document.querySelectorAll('.sender-chip').forEach(c => c.classList.remove('active', 'suggest'));
-  // Clear photo
   clearPhoto();
-  // Clear scanner
   stopBarcodeScan();
+  document.getElementById('aiStatus').className = 'ai-status';
 }
 
-function showToast(message, type = 'success') {
+let toastTimer = null;
+function showToast(message, type) {
   const toast = document.getElementById('toast');
   toast.textContent = message;
-  toast.className = `toast ${type} show`;
-  setTimeout(() => { toast.classList.remove('show'); }, 3000);
+  toast.className = 'toast ' + (type || 'success') + ' show';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 4000);
 }
 
-// Init
+// 切到后台时关掉摄像头，避免指示灯长亮
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && scannerStream) stopBarcodeScan();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   populateConfig();
+  renderPending();
 });
 </script>
 </body>
